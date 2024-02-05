@@ -1,0 +1,36 @@
+# Kubernetes Einführung: Deployments, ReplicaSets, Updates und Rollbacks
+
+## Ziel
+In diesen Übungen lernst du, wie du Deployments und ReplicaSets in Kubernetes erstellst, Updates durchführst und Rollbacks machst.
+
+## Voraussetzungen
+- Kubernetes ist auf deinem Computer installiert (siehe vorherige Übungen).
+
+## Aufgaben
+
+### 1. Deployment erstellen
+Erstelle ein einfaches Kubernetes-Deployment mit einem NGINX-Container:
+
+### 2. Deployment-Status überprüfen
+Überprüfe den Status des erstellten Deployments:
+
+### 3. Pods im Deployment anzeigen
+Zeige die erstellten Pods im Deployment an:
+
+### 4. Skaliere das Deployment
+Skaliere das Deployment auf drei Replikate:
+
+### 5. Aktualisiere das Deployment
+Aktualisiere das NGINX-Image im Deployment auf eine neue Version:
+
+### 6. Überprüfe den Update-Status
+Überprüfe den Status des laufenden Updates:
+
+### 7. Anzeige von ReplicaSets
+Zeige die erstellten ReplicaSets an:
+
+### 8. Rollback des Deployments
+Führe ein Rollback des Deployments auf die vorherige Version durch:
+
+### 9. Überprüfe den Rollback-Status
+Überprüfe den Status des Rollbacks

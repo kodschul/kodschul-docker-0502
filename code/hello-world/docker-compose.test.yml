@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  frontend:
+    container_name: hello_world_frontend_test
+    build: frontend
+    ports:
+      - 9102:80
+    volumes:
+      - ./frontend:/frontend/
+
+  backend:
+    container_name: hello_world_backend_test
+    build: backend
+    volumes:
+      - ./backend:/backend/
+
+  db:
+    container_name: hello_world_db_test
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: test_secret
+
+  adminer:
+    container_name: hello_world_adminer_test
+    image: adminer
+    restart: always
+    ports:
+      - 8095:8080
