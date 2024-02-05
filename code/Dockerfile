@@ -4,9 +4,9 @@ FROM python:3.10-alpine
 RUN pip install flask requests
 
 WORKDIR /frontend
-COPY frontend.py .
+COPY . .
 
 
-CMD ["python", "frontend.py" ]
+ENTRYPOINT [ "python", "frontend.py" ]
 
 EXPOSE 80
