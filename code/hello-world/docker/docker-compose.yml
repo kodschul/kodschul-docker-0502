@@ -2,7 +2,6 @@ version: "3.8"
 
 services:
   frontend:
-    container_name: frontend
     build: ../frontend
     entrypoint: python frontend.py
     ports:
@@ -30,7 +29,6 @@ services:
       - db-network
 
   db:
-    container_name: db
     image: mysql
     restart: always
     environment:
