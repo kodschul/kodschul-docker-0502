@@ -18,3 +18,23 @@ services:
       - "8081:80"
     volumes:
       - ./backend:/backend
+
+  db:
+    container_name: db
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+
+    volumes:
+      - db_data:/var/lib/mysql
+
+  adminer:
+    container_name: adminer
+    image: adminer
+    restart: always
+    ports:
+      - 8090:8080
+
+volumes:
+  db_data:
