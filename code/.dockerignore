@@ -1,3 +1,4 @@
 secret.env
 .dockerignore
 optimized-build
+*.env
