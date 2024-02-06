@@ -3,16 +3,18 @@ version: "3.8"
 services:
   frontend:
     container_name: frontend
-    build: .
+    build: frontend
     entrypoint: python frontend.py
     ports:
       - "8080:80"
+    volumes:
+      - ./frontend:/frontend
 
   backend:
     container_name: backend
-    build:
-      context: .
-      dockerfile: backend.dockerfile
+    build: backend
     command: python frontend.py
     ports:
       - "8081:80"
+    volumes:
+      - ./backend:/backend
