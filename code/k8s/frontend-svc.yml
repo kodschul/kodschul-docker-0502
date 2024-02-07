@@ -6,9 +6,7 @@ spec:
   selector:
     module: frontend
   ports:
-    - protocol: TCP
-      # internen port für den Cluster IP + port
-      port: 80
+    - port: 80
       # Container Port
       targetPort: 80
       # Node port (extern, nur bei NodePort)
