@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cron
+spec:
+  schedule: "* * * * *"
+
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: frontend
+              image: busybox
+              command: ["echo", '"test"', ">", "test.txt"]
+              imagePullPolicy: IfNotPresent
+              ports:
+                - containerPort: 80
+
+              volumeMounts:
+                - name: app-storage-volume
+                  mountPath: /data
+
+          volumes:
+            - name: app-storage-volume
+              persistentVolumeClaim:
+                claimName: app-storage

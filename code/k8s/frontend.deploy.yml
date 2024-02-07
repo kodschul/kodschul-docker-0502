@@ -22,3 +22,12 @@ spec:
           imagePullPolicy: Never
           ports:
             - containerPort: 80
+
+          volumeMounts:
+            - name: app-storage-volume
+              mountPath: /data
+
+      volumes:
+        - name: app-storage-volume
+          persistentVolumeClaim:
+            claimName: app-storage
