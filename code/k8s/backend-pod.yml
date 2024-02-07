@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: backend
+  labels:
+    module: backend
+
+spec:
+  containers:
+    - name: backend
+      image: schulung-backend:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 80
