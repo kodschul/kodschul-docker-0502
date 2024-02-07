@@ -1,3 +1,3 @@
-# DockerundKubernetes-GrundlagenContainer-Virtualisierung-236477
+# Docker & Kubernetes
 
-KursRepository zu Kurs Docker und Kubernetes - Grundlagen Container-Virtualisierung der ppedv AG
+Grundlagen Docker & Kubernetes
