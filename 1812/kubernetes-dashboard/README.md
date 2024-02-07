@@ -47,3 +47,9 @@ kubectl apply -f config.yml
 ```
 kubectl get secret admin-user -n kubernetes-dashboard -o jsonpath={".data.token"} | base64 -d
 ```
+
+for windows
+
+```
+kubectl describe secret/admin-user -n kubernetes-dashboard
+```
