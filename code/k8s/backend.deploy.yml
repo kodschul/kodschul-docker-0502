@@ -1,24 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend
+  name: backend
 spec:
   # replicas: 1
 
   selector:
     matchLabels:
-      module: frontend
+      module: backend
 
   template:
     metadata:
-      name: frontend
+      name: backend
       labels:
-        module: frontend
+        module: backend
 
     spec:
       containers:
-        - name: frontend
-          image: schulung-frontend:v2
+        - name: backend
+          image: schulung-backend:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 80
