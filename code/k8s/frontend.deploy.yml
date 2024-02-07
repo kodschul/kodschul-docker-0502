@@ -1,8 +1,7 @@
 apiVersion: apps/v1
-kind: ReplicaSet
+kind: Deployment
 metadata:
   name: frontend
-
 spec:
   # replicas: 1
 
@@ -12,13 +11,14 @@ spec:
 
   template:
     metadata:
+      name: frontend
       labels:
         module: frontend
 
     spec:
       containers:
         - name: frontend
-          image: schulung-frontend:v2
+          image: schulung-frontend:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 80
