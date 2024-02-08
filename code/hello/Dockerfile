@@ -4,7 +4,7 @@ RUN pip install flask requests
 
 WORKDIR /frontend
 
-COPY frontend.py . 
+COPY . . 
 
 CMD [ "python", "frontend.py" ]
 
