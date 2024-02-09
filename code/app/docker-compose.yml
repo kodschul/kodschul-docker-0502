@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  frontend:
+    build:
+      context: frontend
+      args:
+        - module=backendtest
+        - version=3.0
+        - frontend_port=9002
+    ports:
+      - 1500:9002
+    volumes:
+      - ./frontend:/frontend
+
+  backend:
+    build: backend
+    ports:
+      - 81:80
+    volumes:
+      - ./backend:/backend
