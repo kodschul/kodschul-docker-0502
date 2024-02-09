@@ -7,11 +7,16 @@ services:
       args:
         - module=backendtest
         - version=3.0
-        - frontend_port=9002
     ports:
-      - 1500:9002
+      - ${FE_EXTERN_PORT}:${FE_INTERN_PORT}
     volumes:
       - ./frontend:/frontend
+    environment:
+      - FRONTEND_PORT=${FE_INTERN_PORT}
+      - BACKEND_URL=http://backend:${BE_INTERN_PORT}
+
+    env_file:
+      - ./frontend/test.env
 
   backend:
     build: backend

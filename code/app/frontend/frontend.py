@@ -9,14 +9,17 @@ ips = socket.gethostbyname_ex(hostname)[2]
 
 port = os.getenv("FRONTEND_PORT")
 
+backend_url = os.getenv("BACKEND_URL")
+
 
 app = Flask(__name__)
 
 
 @app.route('/')
 def index():
+    backend_response = requests.get(backend_url).text
 
-    backend_response = requests.get("http://backend:80").text
+    # backend_response = requests.get("http://backend:80").text
     # backend_response = "Backend is coming later!"
     # backend_response = ips
     return f'<html style="background:green;">Hello World V1, The backend said: {backend_response} </html>'
