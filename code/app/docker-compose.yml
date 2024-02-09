@@ -2,6 +2,8 @@ version: "3.8"
 
 services:
   frontend:
+    container_name: frontend
+    image: coolapp-frontend:v1
     build:
       context: frontend
       args:
@@ -19,8 +21,18 @@ services:
       - ./frontend/test.env
 
   backend:
+    container_name: backend
+    image: coolapp-backend:v1
     build: backend
     ports:
       - 81:80
     volumes:
       - ./backend:/backend
+
+  web:
+    container_name: web
+    image: httpd
+    ports:
+      - 9000:80
+    volumes:
+      - ./web:/usr/local/apache2/htdocs/
