@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: frontend
+  labels:
+    module: frontend
+
+spec:
+  containers:
+    - name: frontend
+      image: schulung-frontend:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 80
