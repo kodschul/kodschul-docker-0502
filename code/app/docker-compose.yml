@@ -3,7 +3,7 @@ version: "3.8"
 services:
   frontend:
     container_name: frontend
-    image: coolapp-frontend:v1
+    image: coolapp-frontend:v2
     build:
       context: frontend
       args:
