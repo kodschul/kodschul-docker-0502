@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "1000:80"
+
+  db:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: root
