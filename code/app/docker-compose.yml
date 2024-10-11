@@ -4,7 +4,7 @@ services:
   frontend:
     # container_name: frontend
     # command: ["node", "AB"]
-    image: frontend:v1
+    image: frontend:v2
     build:
       context: frontend
       dockerfile: app.dockerfile
