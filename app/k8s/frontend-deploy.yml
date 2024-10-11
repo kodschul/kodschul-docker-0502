@@ -19,9 +19,6 @@ spec:
       containers:
         - name: app
           image: frontend:v2
-          command:
-            - sleep
-            - 1000s
           imagePullPolicy: Never
           ports:
             - containerPort: 80
@@ -29,3 +26,12 @@ spec:
           resources:
             limits:
               cpu: 10m
+
+          volumeMounts:
+            - name: app-storage-volume
+              mountPath: /data
+
+      volumes:
+        - name: app-storage-volume
+          persistentVolumeClaim:
+            claimName: app-storage
