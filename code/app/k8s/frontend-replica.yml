@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: frontend
+
+spec:
+  selector:
+    matchLabels:
+      my-app: hello
+      my-tier: frontend
+
+  template:
+    metadata:
+      labels:
+        my-app: hello
+        my-tier: frontend
+
+    spec:
+      containers:
+        - name: app
+          image: frontend:v1
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: frontend2
+  labels:
+    my-app: hello
+    my-tier: frontend
+
+spec:
+  containers:
+    - name: app
+      image: frontend:v1
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 80

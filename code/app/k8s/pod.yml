@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello
+
+spec:
+  containers:
+    - name: hello
+      image: busybox:latest
+      command:
+        - echo
+        - "Hello World"
+
+    - name: hello2
+      image: busybox:latest
+      command:
+        - echo
+        - "Hello World2"
+
+  restartPolicy: Never

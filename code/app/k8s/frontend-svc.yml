@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+
+spec:
+  selector:
+    my-app: hello
+    my-tier: frontend
+
+  ports:
+    - port: 8080
+      # container port
+      targetPort: 80
+      nodePort: 30080
+
+  type: NodePort
