@@ -1,12 +1,12 @@
-FROM python:3.10-alpine
+FROM python:3.9-alpine
 
-RUN pip install flask requests
+RUN pip install flask
 
-WORKDIR /backend
+WORKDIR /app
 
-COPY . . 
 
+COPY . .
 
 CMD [ "python", "backend.py" ]
 
-EXPOSE 80
+EXPOSE 80 

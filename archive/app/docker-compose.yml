@@ -1,76 +1,63 @@
-version: "3.8"
+version: "3.9"
 
 services:
   frontend:
-    container_name: frontend
-    image: coolapp-frontend:v1
+    # container_name: frontend
+    # command: ["node", "AB"]
+    image: frontend:v2
     build:
       context: frontend
+      dockerfile: app.dockerfile
       args:
-        - module=backendtest
-        - version=3.0
+        - APP_VERSION=1.0
     ports:
-      - ${FE_EXTERN_PORT}:${FE_INTERN_PORT}
-    volumes:
-      - ./frontend:/frontend
+      - 80:80
     environment:
-      - FRONTEND_PORT=${FE_INTERN_PORT}
-      - BACKEND_URL=http://backend:${BE_INTERN_PORT}
+      DB_SECRET: ${APP_DB_PASSWORD}
+
+    volumes:
+      - ./frontend:/app
+      - app_data:/data
 
     env_file:
-      - ./frontend/test.env
+      - ${APP_ENV}
+
     networks:
       - frontend-network
 
   backend:
-    container_name: backend
-    image: coolapp-backend:v1
+    # container_name: backend
+
+    image: backend:v1
     build: backend
     ports:
-      - 81:80
+      - "8080:80"
+    environment:
+      DB_SECRET: ${APP_DB_PASSWORD}
+
     volumes:
-      - ./backend:/backend
-      - user_data:/abc
+      - app_temp_volume:/data
+
     networks:
       - db-network
       - frontend-network
 
-  web:
-    container_name: web
-    image: httpd
-    ports:
-      - 9000:80
-    volumes:
-      - ./web:/usr/local/apache2/htdocs/
-    networks:
-      - frontend-network
+    mem_limit: 520m
 
   db:
-    container_name: db
-    image: mysql
-    restart: always
+    image: mysql:latest
     environment:
-      MYSQL_ROOT_PASSWORD: secret
-    networks:
-      - db-network
-    volumes:
-      - db_data:/var/lib/mysql
+      MYSQL_ROOT_PASSWORD: root
 
-  adminer:
-    container_name: adminer
-    image: adminer
-    restart: always
-    ports:
-      - 8090:8080
     networks:
       - db-network
+
+volumes:
+  app_data:
+    external: true
+
+  app_temp_volume:
 
 networks:
   frontend-network:
   db-network:
-
-volumes:
-  db_data:
-  user_data:
-    external: true
-  test_data:
