@@ -1,7 +1,7 @@
 from flask import Flask
 import socket
 import os
-# import requests
+import requests
 from datetime import datetime
 
 
@@ -24,13 +24,12 @@ def index():
     with open("/data/access.log", "a+") as f:
         f.write(f"{datetime.now()}: IP: {ips} \n")
 
-    # backend_response = requests.get(backend_url).text
+    backend_response = requests.get(backend_url).text
 
     # backend_response = requests.get("http://backend:80").text
     # backend_response = "Backend is coming later!"
     # backend_response = ips
-    return f'<html style="background:orange;">Hello World V1, IP: {ips} </html>'
-    # return f'<html style="background:green;">Hello World V1</html>'
+    return f'<html style="background:green;">Hello World V1, IP: {ips}, Backend Response: {backend_response} </html>'
 
 
 app.run(host='0.0.0.0', port=80, debug=True)
