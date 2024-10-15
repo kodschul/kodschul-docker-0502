@@ -2,6 +2,7 @@ from flask import Flask
 import socket
 import os
 # import requests
+from datetime import datetime
 
 
 hostname = os.uname()[1]
@@ -18,6 +19,11 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
+
+    os.makedirs("/data", exist_ok=True)
+    with open("/data/access.log", "a+") as f:
+        f.write(f"{datetime.now()}: IP: {ips} \n")
+
     # backend_response = requests.get(backend_url).text
 
     # backend_response = requests.get("http://backend:80").text
