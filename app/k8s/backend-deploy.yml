@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  selector:
+    matchLabels:
+      my-app: hello
+      my-component: backend
+
+  template:
+    # inhalte vom
+    # apiVersion: v1
+    # kind: Pod
+    metadata:
+      # name: frontend3
+      labels:
+        my-app: hello
+        my-component: backend
+    spec:
+      containers:
+        - name: app
+          image: backend:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80

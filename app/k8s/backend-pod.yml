@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: backend2
+  labels:
+    my-app: hello
+    my-component: backend
+spec:
+  containers:
+    - name: app
+      image: backend:v1
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 80

@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+
+spec:
+  selector:
+    matchLabels:
+      my-app: hello
+      my-component: frontend
+
+  template:
+    # inhalte vom
+    # apiVersion: v1
+    # kind: Pod
+    metadata:
+      # name: frontend3
+      labels:
+        my-app: hello
+        my-component: frontend
+    spec:
+      containers:
+        - name: app
+          image: frontend:v2
+          imagePullPolicy: IfNotPresent
+          command:
+            - sleep
+            - 100s
+          ports:
+            - containerPort: 80
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            # tcpSocket:
+            #   port: 80
+            initialDelaySeconds: 15
+            timeoutSeconds: 10
+            periodSeconds: 10
+
+          resources:
+            limits:
+              cpu: 20m
+
+          # volumeMounts:
+          #   # - name: frontend-data
+          #   #   mountPath: /data
+
+          #   - name: frontend-storage
+          #     mountPath: /data
+
+      # volumes:
+      #   - name: frontend-data
+      #     hostPath:
+      #       path: /mnt/frontend-data
+
+      # - name: frontend-storage
+      #   persistentVolumeClaim:
+      #     claimName: app-storage

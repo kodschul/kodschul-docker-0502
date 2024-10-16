@@ -1,6 +1,7 @@
 services:
   frontend:
-    image: hello-frontend
+    image: frontend:v3
+    build: ../frontend
     ports:
       - "1000-1010:80"
 
@@ -12,6 +13,7 @@ services:
       - frontend-network
 
   backend:
+    image: backend:v1
     build: ../backend
     # ports:
     #   - "${BACKEND_PORT}:80"

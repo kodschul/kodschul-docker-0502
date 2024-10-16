@@ -9,7 +9,7 @@ spec:
     name: frontend
 
   minReplicas: 2
-  maxReplicas: 10
+  maxReplicas: 12
 
   metrics:
     - type: Resource
@@ -17,4 +17,4 @@ spec:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: 10
+          averageUtilization: 20
