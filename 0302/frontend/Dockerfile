@@ -9,3 +9,5 @@ COPY . .
 CMD [ "python", "frontend.py" ]
 
 EXPOSE 80
+
+# https://github.com/kodschul/kodschul-docker-0502
