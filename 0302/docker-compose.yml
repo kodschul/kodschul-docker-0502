@@ -1,0 +1,88 @@
+services:
+  frontend:
+    # container_name: frontend
+
+    # command: frontend-failure.py
+    # entrypoint: echo
+    build:
+      context: ./frontend
+      args:
+        - APP_VERSION=5.0
+        - ABCD=EFG
+    image: 127.0.0.1:5000/frontend:v2
+    # image: franznkemaka/hello-app:v1
+    ports:
+      - 1001-1002:80
+    environment:
+      BACKEND_URL: "http://backend:80"
+      MY_SECRET_PASS: ${FRONTEND_SECRET_PASS}
+      BE_EXTERNAL_PORT: ${BE_PORT}
+    env_file:
+      - ./frontend/.container-env
+
+    networks:
+      - frontend-network
+
+    volumes:
+      - app-data:/data
+
+    depends_on:
+      - backend
+
+    deploy:
+      restart_policy:
+        condition: always
+        # delay: 10s
+        # max_attempts: 100
+
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.8"
+          memory: 40m
+          pids: 4
+
+  backend:
+    # container_name: backend
+    build: ./backend
+    scale: 1
+    image: 127.0.0.1:5000/backend:v2
+    ports:
+      - :80
+
+    deploy:
+      restart_policy:
+        condition: unless-stopped
+        delay: 10s
+        # max_attempts: 100
+
+    networks:
+      - frontend-network
+      - db-network
+
+    # volumes:
+    #   - test-vol:/abc
+
+    depends_on:
+      - db
+
+  db:
+    image: nginx
+
+    networks:
+      - db-network
+
+    deploy:
+      resources:
+        reservations:
+          memory: 40m
+
+volumes:
+  app-data:
+
+  # test-vol:
+  #   external: true
+
+networks:
+  frontend-network:
+  db-network:

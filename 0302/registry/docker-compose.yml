@@ -1,0 +1,24 @@
+services:
+  registry:
+    image: registry
+
+    ports:
+      - 6000:5000
+    volumes:
+      - ./data:/var/lib/registry
+      - ./registry-config.yml:/etc/docker/registry/config.yml
+    # environment:
+    #   - REGISTRY_HTTP_HEADERS_Access-Control-Allow-Origin=http://localhost:8001
+  registry-ui:
+    image: joxit/docker-registry-ui
+    container_name: registry-ui
+    environment:
+      REGISTRY_URL: "http://localhost:6000"
+      SINGLE_REGISTRY: true
+    ports:
+      - 8001:80
+
+  backend-test:
+    image: localhost:6000/backend:v1
+    ports:
+      - 8081:80

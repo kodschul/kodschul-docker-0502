@@ -1,0 +1,16 @@
+services:
+  elasticsearch:
+    image: elasticsearch:7.17.27
+    environment:
+      - discovery.type=single-node
+
+  logstash:
+    image: logstash:5.4.3
+    platform: linux/amd64
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+
+  kibana:
+    image: kibana:5.4.3
+    ports:
+      - 5601:5601

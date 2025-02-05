@@ -3,8 +3,10 @@ import socket
 import os
 from datetime import datetime
 
-hostname = os.uname()[1]
-ips = socket.gethostbyname_ex(hostname)[2]
+ips = os.uname()
+# hostname = os.uname()
+# ips = hostname
+# ips = socket.gethostbyname_ex(hostname)[2]
 
 
 app = Flask(__name__)

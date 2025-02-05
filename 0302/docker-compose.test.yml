@@ -1,0 +1,24 @@
+services:
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend
+      args:
+        - APP_VERSION=5.0
+        - ABCD=EFG
+    image: frontend:v1
+    ports:
+      - ${FE_PORT}:80
+    environment:
+      BACKEND_URL: "http://backend:80"
+      MY_SECRET_PASS: ${FRONTEND_SECRET_PASS}
+      BE_EXTERNAL_PORT: ${BE_PORT}
+    env_file:
+      - ./frontend/.container-env
+
+  backend:
+    container_name: backend
+    build: ./backend
+    image: backend:v1
+    ports:
+      - ${BE_PORT}:80
