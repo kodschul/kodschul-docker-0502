@@ -2,7 +2,7 @@
 
 ```
 
-docker run -d --name registry -p 5000:5000 registry
+docker run -d --name registry -p 9000:5000 registry
 
 ```
 

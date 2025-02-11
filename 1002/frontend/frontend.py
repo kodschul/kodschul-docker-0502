@@ -26,9 +26,9 @@ def index():
 
     # backend_response = requests.get(backend_url).text
 
-    # backend_response = requests.get("http://backend:80").text
+    backend_response = requests.get("http://backend:80").text
     # backend_response = "Backend is coming later!"
-    backend_response = "Not yet!"
+    # backend_response = "Not yet!"
     return f'<html style="background:yellow;">Hello World V1, IP: {ips}, Backend Response: {backend_response} </html>'
 
 
