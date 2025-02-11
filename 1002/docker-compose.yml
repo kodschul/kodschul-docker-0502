@@ -16,13 +16,38 @@ services:
     depends_on:
       - backend
 
+    networks:
+      - frontend-net
+
+    deploy:
+      resources:
+        reservations:
+          memory: 100mb
+          cpus: "0.6"
+
   backend:
     build: ./backend
     deploy:
       replicas: 2
-
     environment:
       MY_PASSWORD: ${MY_PASSWORD}
 
     volumes:
-      - ./data:/data
+      - backend-data:/data
+
+    networks:
+      - frontend-net
+      - db-net
+
+  db:
+    image: nginx
+
+    networks:
+      - db-net
+
+volumes:
+  backend-data:
+
+networks:
+  frontend-net:
+  db-net:
