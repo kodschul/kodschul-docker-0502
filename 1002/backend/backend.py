@@ -12,6 +12,10 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
+    os.makedirs("/data", exist_ok=True)
+    with open("/data/access.log", "a+") as f:
+        f.write(f"{datetime.now()}: IP: {ips} \n")
+
     return {"ip": str(ips), "username": "root", "now": datetime.now()}
 
 

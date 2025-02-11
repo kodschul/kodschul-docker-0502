@@ -1,10 +1,28 @@
 services:
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        - APP_VERSION=5.0
+        - BUILD_APP_PASSWORD=my_secret
+      # dockerfile: Dockerfile
     ports:
-      - 8000:80
+      - ${FE_PORT}:80
+
+    environment:
+      - MY_PASSWORD=${MY_PASSWORD}
+      - APP_PASSWORD=${APP_PASSWORD}
+
+    depends_on:
+      - backend
 
   backend:
     build: ./backend
-    # ports:
-    #   - 8001:80
+    deploy:
+      replicas: 2
+
+    environment:
+      MY_PASSWORD: ${MY_PASSWORD}
+
+    volumes:
+      - ./data:/data
