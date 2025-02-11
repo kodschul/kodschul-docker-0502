@@ -32,10 +32,10 @@ helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dash
 kubectl get pods -n kubernetes-dashboard
 ```
 
--> Pod forwording
+-> Port forwarding
 
 ```
-kubectl -n kubernetes-dashboard port-forward $POD_NAME 8070:8443
+kubectl -n kubernetes-dashboard port-forward HERE_DER_POD_NAME_EINSETZEN 8070:8443
 ```
 
 -> Token kriegen
