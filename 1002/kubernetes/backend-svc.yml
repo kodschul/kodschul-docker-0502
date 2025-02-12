@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector:
+    app: backend
+
+  ports:
+    # where the traffic comes from
+    - port: 80
+
+      # where to redirect the traffic to in the container
+      targetPort: 80
+
+      # node Port to access from my computer
+      nodePort: 32001
+
+  type: NodePort
+# LOCAL -> CLUSTER -> POD localhost:32000 -> frontend:80 -> POD (*:80)
+# CLUSTER -> POD frontend:80 -> -> POD (*:80)

@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  selector:
+    matchLabels:
+      # labels of my frontend - pod
+      app: backend
+
+  template:
+    metadata:
+      # name: frontend-sadsah
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: app
+          image: backend:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80

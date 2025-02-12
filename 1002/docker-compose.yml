@@ -1,5 +1,6 @@
 services:
   frontend:
+    image: frontend:v2
     build:
       context: ./frontend
       args:
@@ -26,6 +27,7 @@ services:
           cpus: "0.6"
 
   backend:
+    image: backend:v1
     build: ./backend
     deploy:
       replicas: 2
