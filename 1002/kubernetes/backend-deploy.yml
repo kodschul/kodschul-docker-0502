@@ -20,3 +20,12 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
+
+          volumeMounts:
+            - name: backend-data
+              mountPath: /data
+
+      volumes:
+        - name: backend-data
+          hostPath:
+            path: /mnt/backend-data
