@@ -1,0 +1,12 @@
+services:
+  frontend:
+    image: hello-frontend
+    build: frontend
+    ports:
+      - 8001:80
+
+  backend:
+    image: hello-backend
+    build: backend
+    ports:
+      - 8002:80
