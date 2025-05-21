@@ -1,12 +1,12 @@
 services:
   frontend:
-    image: hello-frontend
+    image: hello-frontend:v1
     build: frontend
     ports:
       - 8001-8005:80
 
   backend:
-    image: hello-backend
+    image: hello-backend:v1
     build: backend
     ports:
       - ${BE_PORT}:80
