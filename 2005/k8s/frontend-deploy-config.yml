@@ -24,11 +24,24 @@ spec:
           ports:
             - containerPort: 80
 
+          env:
+            - name: BACKEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: frontend-env
+                  key: BACKEND_URL
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: frontend-secret
+                  key: DB_PASSWORD
+
           volumeMounts:
-            - name: app-data
-              mountPath: /data
+            - name: env-file
+              mountPath: /app/config
 
       volumes:
-        - name: app-data
-          hostPath:
-            path: /mnt/app-data
+        - name: env-file
+          configMap:
+            name: frontend-env

@@ -22,16 +22,16 @@ app = Flask(__name__)
 @app.route('/')
 def index():
 
-    # os.makedirs("/data", exist_ok=True)
-    # with open("/data/access.log", "a+") as f:
-    #     f.write(f"{datetime.now()}: IP: {ips} \n")
+    os.makedirs("/data", exist_ok=True)
+    with open("/data/access.log", "a+") as f:
+        f.write(f"{datetime.now()}: IP: {ips} \n")
 
     backend_response = requests.get(backend_url).text
 
     # backend_response = requests.get("http://backend:80").text
     # backend_response = "Backend is coming later!"
     # backend_response = ips
-    return f'<html style="background:blue;">Hello World V4, IP: {ips}, Backend Response: {backend_response} </html>'
+    return f'<html style="background:gray;">Hello World V4, IP: {ips}, Backend Response: {backend_response} </html>'
 
 
 app.run(host='0.0.0.0', port=80, debug=True)

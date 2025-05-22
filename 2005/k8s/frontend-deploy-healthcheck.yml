@@ -24,11 +24,17 @@ spec:
           ports:
             - containerPort: 80
 
-          volumeMounts:
-            - name: app-data
-              mountPath: /data
+      readinessProbe:
+        exec:
+          command: ["cat", "/app/frontend.py"]
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        failureThreshold: 2
 
-      volumes:
-        - name: app-data
-          hostPath:
-            path: /mnt/app-data
+      livenessProbe:
+        httpGet:
+          path: /
+          port: 80
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        failureThreshold: 2
