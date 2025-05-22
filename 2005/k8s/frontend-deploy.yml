@@ -27,8 +27,13 @@ spec:
           volumeMounts:
             - name: app-data
               mountPath: /data
+              readOnly: false
 
       volumes:
-        - name: app-data
+        - name: app-local-data
           hostPath:
             path: /mnt/app-data
+
+        - name: app-data
+          persistentVolumeClaim:
+            claimName: app-data
