@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: hello-frontend:v3
+    image: hello-frontend:v4
     build: frontend
     ports:
       - 8001-8005:80

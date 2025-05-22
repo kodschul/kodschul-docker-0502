@@ -3,6 +3,8 @@ import socket
 import os
 import requests
 from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()
 
 
 hostname = os.uname()[1]
@@ -10,8 +12,8 @@ ips = socket.gethostbyname_ex(hostname)[2]
 
 # port = os.getenv("FRONTEND_PORT")
 # port = 5000
-backend_url = "http://backend:80"
-# backend_url = os.getenv("BACKEND_URL")
+# backend_url = "http://backend:80"
+backend_url = os.getenv("BACKEND_URL")
 
 
 app = Flask(__name__)
@@ -24,12 +26,12 @@ def index():
     # with open("/data/access.log", "a+") as f:
     #     f.write(f"{datetime.now()}: IP: {ips} \n")
 
-    # backend_response = requests.get(backend_url).text
+    backend_response = requests.get(backend_url).text
 
-    backend_response = requests.get("http://backend:80").text
+    # backend_response = requests.get("http://backend:80").text
     # backend_response = "Backend is coming later!"
     # backend_response = ips
-    return f'<html style="background:green;">Hello World V3, IP: {ips}, Backend Response: {backend_response} </html>'
+    return f'<html style="background:blue;">Hello World V4, IP: {ips}, Backend Response: {backend_response} </html>'
 
 
 app.run(host='0.0.0.0', port=80, debug=True)
