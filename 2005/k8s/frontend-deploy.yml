@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+  annotations:
+    kubernetes.io/change-cause: v1
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+        test: abcd
+    spec:
+      containers:
+        - name: app
+          image: hello-frontend:v1
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+
+          readinessProbe:
+            exec:
+              command: ["cat", "/app/frontend.py"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 2
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 2

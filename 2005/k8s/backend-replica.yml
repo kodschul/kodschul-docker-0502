@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  replicas: 5
+
+  selector:
+    matchLabels:
+      app: backend
+
+  template:
+    metadata:
+      labels:
+        app: backend
+        test: abc
+    spec:
+      containers:
+        - name: app
+          image: hello-backend:v1
+          imagePullPolicy: Never
+
+          ports:
+            - containerPort: 80

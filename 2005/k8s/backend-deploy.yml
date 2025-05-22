@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  selector:
+    matchLabels:
+      app: backend
+
+  template:
+    metadata:
+      labels:
+        app: backend
+        test: abc
+    spec:
+      containers:
+        - name: app
+          image: hello-backend:v1
+          imagePullPolicy: Never
+
+          ports:
+            - containerPort: 80
