@@ -1,10 +1,25 @@
 services:
   frontend:
     build: frontend
+    image: hello-frontend:v1
     ports:
       - 8000:80
 
+    volumes:
+      - ./frontend:/app
+      - frontend-data:/data
+
+    environment:
+      - BACKEND_URL=http://backend:80
+
   backend:
+    image: hello-backend:v1
     build: backend
     ports:
       - 8001:80
+
+    volumes:
+      - backend-data:/data
+
+volumes:
+  frontend-data:
