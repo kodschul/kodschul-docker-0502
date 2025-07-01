@@ -1,0 +1,7 @@
+services:
+  frontend:
+    build: frontend
+    deploy:
+      replicas: 2
+    ports:
+      - 8000-8005:80
