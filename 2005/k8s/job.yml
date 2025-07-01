@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: log-job
+
+spec:
+  backoffLimit: 2
+
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: app
+          image: hello-frontend:v4
+          command: ["mkdir", "-p", "/data"]
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+
+      #     volumeMounts:
+      #       - name: app-data
+      #         mountPath: /data
+      #         readOnly: false
+
+      # volumes:
+      #   - name: app-data
+      #     persistentVolumeClaim:
+      #       claimName: app-data

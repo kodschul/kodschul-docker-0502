@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cron
+
+spec:
+  schedule: "* * * * *"
+
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: app
+              image: hello-frontend:v4
+              command: ["echo", "Hello world"]
+              imagePullPolicy: Never

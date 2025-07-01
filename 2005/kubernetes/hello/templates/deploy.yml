@@ -1,25 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend
+  name: {{ .Values.projectName }}
   labels:
-    app: frontend
+    app: {{ .Values.projectName }}
   annotations:
     kubernetes.io/change-cause: v4
 spec:
   selector:
     matchLabels:
-      app: frontend
+      app: {{ .Values.projectName }}
 
   template:
     metadata:
       labels:
-        app: frontend
-        test: abcd
+        app: {{ .Values.projectName }}
+
     spec:
       containers:
         - name: app
-          image: hello-frontend:v4
+          image: {{ .Values.image }}
           imagePullPolicy: Never
           ports:
             - containerPort: 80
+
+          resources:
+            limits:
+              cpu: 20m
