@@ -28,8 +28,8 @@ def index():
 
     # backend_response = requests.get(backend_url).text
 
-    backend_response = requests.get("http://backend:80").text
-    #backend_response = "Backend is coming later!"
+    # backend_response = requests.get("http://backend:80").text
+    backend_response = "Backend is coming later!"
     # backend_response = ips
     return f'<html style="background:cyan;">Hello World V2, IP: {ips}, Backend Response: {backend_response} </html>'
 
