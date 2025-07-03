@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.projectName }}-frontend
+
+spec:
+  replicas: 5
+
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: app
+          image: hello-frontend:v3
+          imagePullPolicy: Never
+
+          ports:
+            - containerPort: 80
+
+          volumeMounts:
+            - name: {{ .Values.projectName }}-storage
+              mountPath: /data
+
+      volumes:
+        - name: app-data
+          hostPath:
+            path: /mnt/app-data
+
+        - name: {{ .Values.projectName }}-storage
+          persistentVolumeClaim:
+            claimName: {{ .Values.projectName }}-storage

@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup
+spec:
+  schedule: "* * * * *"
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  concurrencyPolicy: Forbid
+  suspend: true
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: app
+              image: busybox
+              imagePullPolicy: Never
+              command: ["cp", "/data/access.log", "/data/access.log.bak"]
+
+              volumeMounts:
+                - name: app-storage
+                  mountPath: /data
+
+          volumes:
+            - name: app-storage
+              persistentVolumeClaim:
+                claimName: app-storage

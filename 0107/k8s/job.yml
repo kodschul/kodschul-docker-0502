@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: backup-job
+spec:
+  backoffLimit: 2
+
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: app
+          image: busybox
+          imagePullPolicy: Never
+          command: ["cp", "/data/access.log", "/data/access.log.bak"]
+
+          volumeMounts:
+            - name: app-storage
+              mountPath: /data
+
+      volumes:
+        - name: app-storage
+          persistentVolumeClaim:
+            claimName: app-storage
