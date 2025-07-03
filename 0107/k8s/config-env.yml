@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-env
+data:
+  .env: |
+    BACKEND_URL=http://backend:80

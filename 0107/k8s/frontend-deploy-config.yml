@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  annotations:
+    kubernetes.io/change-cause: v4
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: app
+          image: hello-frontend:v4
+          imagePullPolicy: Never
+
+          ports:
+            - containerPort: 80
+
+          env:
+            - name: BACKEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: backend_url
+
+            - name: SUPER_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-config
+                  key: backend_url
+
+          volumeMounts:
+            - name: app-env
+              mountPath: /app/.env
+              subPath: .env
+
+      volumes:
+        - name: app-env
+          configMap:
+            name: app-config-env
