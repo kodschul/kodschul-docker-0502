@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: frontend3
+  name: backend
   labels:
-    app: frontend
+    app: backend
 spec:
   containers:
     - name: app
-      image: hello-frontend:v2
+      image: hello-backend:v1
       imagePullPolicy: Never
 
       ports:

@@ -28,10 +28,10 @@ def index():
 
     # backend_response = requests.get(backend_url).text
 
-    # backend_response = requests.get("http://backend:80").text
-    backend_response = "Backend is coming later!"
+    backend_response = requests.get("http://backend:80").text
+    # backend_response = "Backend is coming later!"
     # backend_response = ips
-    return f'<html style="background:cyan;">Hello World V2, IP: {ips}, Backend Response: {backend_response} </html>'
+    return f'<html style="background:yellow;">Hello World V3, IP: {ips}, Backend Response: {backend_response} </html>'
 
 
 app.run(host='0.0.0.0', port=80, debug=True)

@@ -1,7 +1,7 @@
 services:
   frontend:
     build: frontend
-    image: hello-frontend:v1
+    image: hello-frontend:v3
     ports:
       - 8000:80
 
@@ -17,9 +17,6 @@ services:
     build: backend
     ports:
       - 8001:80
-
-    volumes:
-      - backend-data:/data
 
 volumes:
   frontend-data:
