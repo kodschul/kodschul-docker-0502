@@ -1,0 +1,38 @@
+services:
+  frontend:
+    build:
+      context: frontend
+      dockerfile: app.Dockerfile
+      args:
+        - APP_BUILD_SECRET=${FE_APP_BUILD_SECRET}
+        - APP_VERSION=2.0
+
+    ports:
+      - ${FE_PORT}:80
+
+    environment:
+      APP_SECRET: secret_from_docker_config
+
+    env_file:
+      - frontend.env
+
+    depends_on:
+      - backend
+
+    develop:
+      watch:
+        - path: ./frontend
+          action: rebuild
+
+    volumes:
+      - ./frontend:/app
+      - storage_data:/data
+
+  backend:
+    build: backend
+
+    deploy:
+      replicas: 1
+
+volumes:
+  storage_data:

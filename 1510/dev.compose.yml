@@ -1,3 +1,5 @@
 services:
   optimized_build:
-    build: optimized_build
+    build:
+      context: ./optimized_build
+      dockerfile: unoptimized.Dockerfile
