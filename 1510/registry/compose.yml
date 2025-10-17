@@ -1,0 +1,7 @@
+services:
+  registry:
+    image: registry:2
+    ports:
+      - "6000:5000"
+    volumes:
+      - ./data:/var/lib/registry
