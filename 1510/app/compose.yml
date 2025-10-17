@@ -1,14 +1,15 @@
 services:
   frontend:
-    image: frontend:1.0
+    image: frontend:2.0
     build:
       context: frontend
       dockerfile: app.Dockerfile
-      tags:
-        - "127.0.0.1:6000/frontend:1.0"
 
     depends_on:
       - backend
+
+    deploy:
+      replicas: 3
 
     ports:
       - 8000:80
