@@ -1,0 +1,75 @@
+services:
+  frontend:
+    image: frontend:1.0
+    build:
+      context: frontend
+      dockerfile: app.Dockerfile
+      args:
+        - APP_BUILD_SECRET=${FE_APP_BUILD_SECRET}
+        - APP_VERSION=2.0
+      tags:
+        - "127.0.0.1:6000/frontend:1.0"
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`frontend.localhost`)"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+
+    environment:
+      APP_SECRET: secret_from_docker_config
+
+    env_file:
+      - frontend.env
+
+    depends_on:
+      - backend
+
+    develop:
+      watch:
+        - path: ./frontend
+          action: rebuild
+
+    volumes:
+      - ./frontend:/app
+      - storage_data:/data
+
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 200M
+        reservations:
+          cpus: "0.25"
+          memory: 100M
+
+    networks:
+      - frontend-net
+      - traefik
+
+    expose:
+      - 80
+
+    ports:
+      - :80
+
+  backend:
+    image: backend:1.0
+    build: backend
+
+    deploy:
+      replicas: 1
+
+    networks:
+      - frontend-net
+
+  db:
+    image: busybox
+    command: sleep 1000s
+
+volumes:
+  storage_data:
+
+networks:
+  frontend-net:
+  traefik:
+    external: true
