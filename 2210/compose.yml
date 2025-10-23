@@ -15,7 +15,7 @@ services:
   backend:
     build: backend
 
-  web:
-    image: nginx:latest
-    ports:
-      - 8010:80
+  # web:
+  #   image: nginx:latest
+  #   ports:
+  #     - 8010:80
