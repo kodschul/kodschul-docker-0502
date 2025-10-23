@@ -4,13 +4,16 @@ services:
     ports:
       - 8000:80
 
-    volumes:
-      - ./frontend:/app
+    # volumes:
+    #   - ./frontend:/app
+
+    develop:
+      watch:
+        - path: ./frontend
+          action: rebuild
 
   backend:
     build: backend
-    ports:
-      - 8002:80
 
   web:
     image: nginx:latest
