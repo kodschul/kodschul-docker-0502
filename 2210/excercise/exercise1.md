@@ -84,6 +84,12 @@ npm pakete in Dockerfile installieren mit
 npm install
 ```
 
+Um das Programm zu starten
+
+```
+npm start
+```
+
 2. Test Rezept erstellen mit CURL
 
 ```bash
