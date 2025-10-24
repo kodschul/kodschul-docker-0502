@@ -23,6 +23,11 @@ services:
     build: backend
     image: backend:1.0
 
+  db:
+    container_name: db
+    image: busybox
+    command: sleep 1000
+
   # web:
   #   image: nginx:latest
   #   ports:
