@@ -1,0 +1,3 @@
+Hello from MacOS
+
+modified by Docker Container!

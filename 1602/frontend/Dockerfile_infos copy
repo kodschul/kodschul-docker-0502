@@ -1,0 +1,21 @@
+FROM python:3.13-alpine
+
+RUN cd /app 
+RUN echo ""
+
+
+# option 1
+CMD [ "python", "frontend.py" ]
+
+# option 2
+ENTRYPOINT [ "python", "frontend.py" ]
+
+
+# option 3
+ENTRYPOINT [ "/usr/bin/python/my_entrypoint.sh" ] 
+CMD [  "frontend.py" ]
+
+# keine option
+CMD [ "python", "frontend.py" ]
+ENTRYPOINT [ "python", "frontend.py" ]
+# -> python frontend.py python frontend.py

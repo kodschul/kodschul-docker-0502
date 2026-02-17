@@ -1,0 +1,38 @@
+services:
+  frontend:
+    image: frontend:v1
+    build:
+      context: ./frontend
+      args:
+        - APP_VERSION=$FE_VERSION
+        - OTHER_ARG=3.0.2
+    ports:
+      - :80
+    volumes:
+      - ./frontend:/app
+    deploy:
+      replicas: $FE_REPLICAS
+
+    # nur in der Laufzeit verfügbar und nicht BUILDTIME
+    env_file:
+      - ./app-config.env
+
+  backend:
+    image: backend:v1
+    build: backend
+    env_file:
+      - app-config.env
+    deploy:
+      replicas: $BE_REPLICAS
+
+  # web:
+  #   image: nginx
+  #   ports:
+  #     - 9000:80
+  #   volumes:
+  #     - ./web:/usr/share/nginx/html
+
+  # db:
+  #   image: nginx
+  #   deploy:
+  #     replicas: 2

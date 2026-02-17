@@ -1,0 +1,13 @@
+services:
+  registry:
+    image: registry:2
+    ports:
+      - 6000:5000
+
+  registry-ui:
+    image: joxit/docker-registry-ui:main
+    ports:
+      - 6060:80
+    environment:
+      - REGISTRY_TITLE=Docker Registry UI
+      - NGINX_PROXY_PASS_URL=http://registry:5000

@@ -1,0 +1,12 @@
+services:
+  web:
+    image: nginx
+    ports:
+      - 9000:80
+    volumes:
+      - ./web:/usr/share/nginx/html
+
+  db:
+    image: nginx
+    deploy:
+      replicas: 2
