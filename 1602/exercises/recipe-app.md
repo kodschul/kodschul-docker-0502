@@ -73,13 +73,13 @@
 
 ### PRO-TIP NodeJS für die Dockerfile
 
-````
+```
 cd PROJEKT_ORDNER
 npm install -> Pakete installieren
 npm start -> Anwendung starten
-
 ```
-# Mit Curl kurz ein Recipe erstellen
+
+### Mit Curl kurz ein Recipe erstellen
 
 ```bash
 curl -X POST http://localhost:3000/recipes -H "Content-Type: application/json" -d '{"title":"Spaghetti Carbonara","ingredients":["Spaghetti","Eier","Speck","Parmesan"],"instructions":"Spaghetti kochen, Speck anbraten, mit Eiern und Käse mischen."}'
@@ -116,4 +116,7 @@ curl -X POST http://localhost:3000/recipes -H "Content-Type: application/json" -
 ```
 
 ```
-````
+
+```
+
+```
