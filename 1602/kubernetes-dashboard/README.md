@@ -15,7 +15,7 @@ brew install helm
 -> Add kubernetes-dashboard repository
 
 ```
-helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
+helm repo add kubernetes-dashboard https://kubernetes-retired.github.io/dashboard/
 ```
 
 -> Deploy a Helm Release named "kubernetes-dashboard" using the kubernetes-dashboard chart
