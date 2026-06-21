@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: webserver
+
+spec:
+  selector:
+    my-app: my-web
+
+  ports:
+    - port: 9000
+      targetPort: 80
+      nodePort: 31500
+
+  type: NodePort
+# INCOMING: http://webserver:9000 -> DIRECTED TO -> http://(PORT_IP):(TARGET_PORT)
