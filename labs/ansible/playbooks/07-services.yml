@@ -1,0 +1,127 @@
+---
+# ============================================================
+# Playbook 07 — Service Management
+#
+# Ansible's 'service' module controls system services:
+#   started   → start the service if not running (idempotent)
+#   stopped   → stop  the service if running (idempotent)
+#   restarted → always restart (use carefully — causes downtime)
+#   reloaded  → send SIGHUP: apply new config, zero downtime
+#
+# KEY CONCEPT — HANDLERS:
+#   A handler is a task that runs ONLY once, at the end of the
+#   play, and ONLY if it was notified by at least one task.
+#
+#   Perfect for: "restart nginx only if its config changed"
+#   Without handlers you'd restart on every playbook run,
+#   even when nothing changed.
+#
+# Run: ansible-playbook /playbooks/07-services.yml
+# ============================================================
+
+- name: "Lab 07 — Service Management"
+  hosts: servers
+
+  # ── Handlers ──────────────────────────────────────────────
+  # Defined here; triggered via 'notify:' in tasks below.
+  # Run once, at the END of the play, in definition order.
+  handlers:
+
+    - name: Reload nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
+      # reloaded = SIGHUP → applies config without dropping connections.
+      # Use this for config changes; keep 'restarted' for binary upgrades.
+
+    - name: Restart nginx
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
+
+  tasks:
+
+    # ── Task 1: Install nginx ──────────────────────────────
+    - name: Install nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: true
+
+    # ── Task 2: Ensure the service is started and enabled ──
+    - name: Start and enable nginx
+      ansible.builtin.service:
+        name: nginx
+        state: started    # idempotent: does nothing if already running
+        enabled: true     # enable = survive reboots
+
+    # ── Task 3: Verify it is running ──────────────────────
+    - name: Check nginx service status
+      ansible.builtin.command: service nginx status
+      register: nginx_status
+      changed_when: false   # 'status' never changes state
+      failed_when: false    # non-zero exit is ok (we check manually)
+
+    - name: Show service status
+      ansible.builtin.debug:
+        msg: "{{ nginx_status.stdout_lines }}"
+
+    # ── Task 4: Deploy a config file that NOTIFIES a handler
+    # The copy module sets 'changed=true' only when the file
+    # content actually differs from what's on the server.
+    # If nothing changed → handler is NOT triggered.
+    - name: Deploy custom nginx index.html
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <body style="font-family:monospace; padding:40px">
+            <h1>Served by {{ inventory_hostname }}</h1>
+            <p>Managed by Ansible — handler fired only on change.</p>
+          </body>
+          </html>
+        mode: '0644'
+      notify: Reload nginx   # ← triggers the handler ONLY when changed
+
+    # ── Task 5: Verify the page is reachable ──────────────
+    - name: Fetch the index page with curl
+      ansible.builtin.command: curl -s http://localhost/
+      register: page
+      changed_when: false
+
+    - name: Show the page content
+      ansible.builtin.debug:
+        msg: "{{ page.stdout_lines }}"
+
+    # ── Task 6: Demonstrate service state transitions ──────
+    - name: Stop nginx
+      ansible.builtin.service:
+        name: nginx
+        state: stopped
+
+    - name: Confirm nginx is stopped (rc != 0 is expected)
+      ansible.builtin.command: service nginx status
+      register: stopped_status
+      failed_when: false    # service returns non-zero when stopped — expected
+      changed_when: false
+
+    - name: Show stopped status — expect not running
+      ansible.builtin.debug:
+        msg: "Exit code {{ stopped_status.rc }} — nginx is stopped"
+
+    - name: Start nginx again
+      ansible.builtin.service:
+        name: nginx
+        state: started
+
+    # ── Task 7: Service facts ──────────────────────────────
+    # The service_facts module populates ansible_facts.services
+    # with the current state of every known service.
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Show nginx service fact
+      ansible.builtin.debug:
+        msg: "nginx state = {{ ansible_facts.services['nginx'].state }}"
+      # Try: ansible_facts.services.keys() to see ALL services

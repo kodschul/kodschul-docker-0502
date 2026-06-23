@@ -1,0 +1,246 @@
+---
+# ============================================================
+# Playbook 10 — LDAP / OpenLDAP
+#
+# LDAP (Lightweight Directory Access Protocol) is the protocol
+# behind user directories. Active Directory IS an LDAP server.
+#
+# Key vocabulary:
+#   DN   Distinguished Name  — unique path to an entry
+#        e.g.  cn=alice,ou=users,dc=lab,dc=local
+#   DC   Domain Component    — dc=lab,dc=local means "lab.local"
+#   CN   Common Name         — the entry's human-readable name
+#   OU   Organizational Unit — a folder / container
+#   LDIF LDAP Data Format    — text format used to add/modify entries
+#
+# This playbook:
+#   server1 → install slapd (OpenLDAP server), build a directory
+#   server2 → install ldap-utils (client), query server1 remotely
+#
+# Run: ansible-playbook /playbooks/10-ldap.yml
+# ============================================================
+
+# ── Play 1: Set up OpenLDAP server on server1 ──────────────────
+- name: "Lab 10 — OpenLDAP server on server1"
+  hosts: server1
+
+  vars:
+    ldap_domain: "lab.local"
+    ldap_base_dn: "dc=lab,dc=local"
+    ldap_admin_password: "Admin@1234"
+    ldap_org: "Ansible Lab"
+
+  tasks:
+
+    # ── Task 1: Install python3-apt (required by debconf module) ─
+    - name: Install python3-apt for debconf support
+      ansible.builtin.apt:
+        name: python3-apt
+        state: present
+        update_cache: true
+
+    # ── Task 2: Pre-seed slapd install answers ────────────
+    # slapd asks for admin password, domain, etc. during install.
+    # debconf lets us answer those questions BEFORE apt runs.
+    - name: Pre-seed slapd installation answers
+      ansible.builtin.debconf:
+        name: slapd
+        question: "{{ item.q }}"
+        value: "{{ item.v }}"
+        vtype: "{{ item.t }}"
+      loop:
+        - { q: "slapd/password1",         v: "{{ ldap_admin_password }}", t: "password" }
+        - { q: "slapd/password2",         v: "{{ ldap_admin_password }}", t: "password" }
+        - { q: "slapd/domain",            v: "{{ ldap_domain }}",         t: "string"   }
+        - { q: "shared/organization",     v: "{{ ldap_org }}",            t: "string"   }
+        - { q: "slapd/purge_database",    v: "false",                     t: "boolean"  }
+        - { q: "slapd/move_old_database", v: "true",                      t: "boolean"  }
+      no_log: true   # hide the password from console output
+
+    # ── Task 3: Install OpenLDAP ──────────────────────────
+    - name: Install slapd and ldap-utils
+      ansible.builtin.apt:
+        name:
+          - slapd       # OpenLDAP server daemon
+          - ldap-utils  # ldapsearch, ldapadd, ldapmodify CLI tools
+        state: present
+
+    # ── Task 4: Start slapd ───────────────────────────────
+    - name: Ensure slapd is running
+      ansible.builtin.service:
+        name: slapd
+        state: started
+        enabled: true
+      failed_when: false   # non-fatal in Docker without full init
+
+    # Fallback: start slapd directly if service module fails
+    - name: Start slapd directly (Docker fallback)
+      ansible.builtin.command: slapd -h "ldap:/// ldapi:///" -u openldap
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
+
+    # ── Task 5: Check slapd is listening ─────────────────
+    - name: Wait for slapd port 389 to open
+      ansible.builtin.wait_for:
+        port: 389
+        timeout: 15
+      failed_when: false
+
+    - name: Verify slapd is listening
+      ansible.builtin.command: ss -tlnp
+      register: ports
+      changed_when: false
+
+    - name: Show port 389
+      ansible.builtin.debug:
+        msg: "{{ ports.stdout_lines | select('search', '389') | list }}"
+
+    # ── Task 6: Create OU (Organizational Unit) structure ─
+    # LDIF format: blank line separates entries.
+    # Each entry has a 'dn:' line followed by attributes.
+    - name: Write LDIF for base OUs
+      ansible.builtin.copy:
+        dest: /tmp/base-ous.ldif
+        mode: '0600'
+        content: |
+          # The 'users' container — like a folder for user accounts
+          dn: ou=users,{{ ldap_base_dn }}
+          objectClass: organizationalUnit
+          ou: users
+          description: All company users
+
+          # The 'groups' container — like a folder for groups
+          dn: ou=groups,{{ ldap_base_dn }}
+          objectClass: organizationalUnit
+          ou: groups
+          description: All company groups
+
+    - name: Add base OUs to LDAP
+      ansible.builtin.command: >
+        ldapadd -x
+          -D "cn=admin,{{ ldap_base_dn }}"
+          -w "{{ ldap_admin_password }}"
+          -f /tmp/base-ous.ldif
+      register: add_ous
+      # rc=68 = "already exists" → idempotent, not an error
+      failed_when:
+        - add_ous.rc != 0
+        - "'already exists' not in add_ous.stderr"
+      changed_when: add_ous.rc == 0
+      no_log: true
+
+    - name: Report OU creation result
+      ansible.builtin.debug:
+        msg: "{{ 'OUs created' if add_ous.rc == 0 else 'OUs already exist (idempotent)' }}"
+
+    # ── Task 7: Add sample user entries ───────────────────
+    - name: Write LDIF for sample users
+      ansible.builtin.copy:
+        dest: /tmp/users.ldif
+        mode: '0600'
+        no_log: true
+        content: |
+          dn: cn=alice,ou=users,{{ ldap_base_dn }}
+          objectClass: inetOrgPerson
+          cn: alice
+          sn: Smith
+          givenName: Alice
+          mail: alice@{{ ldap_domain }}
+          userPassword: Alice@1234
+          description: Developer — added by Ansible
+
+          dn: cn=bob,ou=users,{{ ldap_base_dn }}
+          objectClass: inetOrgPerson
+          cn: bob
+          sn: Jones
+          givenName: Bob
+          mail: bob@{{ ldap_domain }}
+          userPassword: Bob@1234
+          description: Ops engineer — added by Ansible
+
+    - name: Add users to LDAP
+      ansible.builtin.command: >
+        ldapadd -x
+          -D "cn=admin,{{ ldap_base_dn }}"
+          -w "{{ ldap_admin_password }}"
+          -f /tmp/users.ldif
+      register: add_users
+      failed_when:
+        - add_users.rc != 0
+        - "'already exists' not in add_users.stderr"
+      changed_when: add_users.rc == 0
+      no_log: true
+
+    # ── Task 8: Query the directory ──────────────────────
+    # ldapsearch: connect (-H), bind as admin (-D), filter, return attrs
+    - name: Search for all users in the directory
+      ansible.builtin.command: >
+        ldapsearch -x
+          -H ldap://localhost
+          -D "cn=admin,{{ ldap_base_dn }}"
+          -w "{{ ldap_admin_password }}"
+          -b "ou=users,{{ ldap_base_dn }}"
+          "(objectClass=inetOrgPerson)"
+          cn mail description
+      register: ldap_search
+      changed_when: false
+      no_log: true
+
+    - name: Show LDAP users
+      ansible.builtin.debug:
+        msg: "{{ ldap_search.stdout_lines }}"
+
+    # ── Task 9: Search with an attribute filter ──────────
+    # Find only the user whose cn=alice
+    - name: Search for a specific user (cn=alice)
+      ansible.builtin.command: >
+        ldapsearch -x
+          -H ldap://localhost
+          -D "cn=admin,{{ ldap_base_dn }}"
+          -w "{{ ldap_admin_password }}"
+          -b "{{ ldap_base_dn }}"
+          "(cn=alice)"
+      register: alice_search
+      changed_when: false
+      no_log: true
+
+    - name: Show alice's entry
+      ansible.builtin.debug:
+        msg: "{{ alice_search.stdout_lines }}"
+
+# ── Play 2: LDAP client — query server1 from server2 ───────────
+- name: "Lab 10 — LDAP client on server2 queries server1"
+  hosts: server2
+
+  vars:
+    ldap_base_dn: "dc=lab,dc=local"
+    ldap_server_ip: "10.20.0.11"   # server1's IP
+    ldap_admin_password: "Admin@1234"
+
+  tasks:
+
+    - name: Install ldap-utils on server2
+      ansible.builtin.apt:
+        name: ldap-utils
+        state: present
+        update_cache: true
+
+    # This demonstrates that LDAP is a NETWORK protocol.
+    # server2 queries server1's directory over TCP port 389.
+    - name: Query server1's directory from server2
+      ansible.builtin.command: >
+        ldapsearch -x
+          -H ldap://{{ ldap_server_ip }}
+          -D "cn=admin,{{ ldap_base_dn }}"
+          -w "{{ ldap_admin_password }}"
+          -b "{{ ldap_base_dn }}"
+          "(objectClass=*)"
+          dn
+      register: remote_query
+      changed_when: false
+      no_log: true
+
+    - name: Show all directory entries visible from server2
+      ansible.builtin.debug:
+        msg: "{{ remote_query.stdout_lines }}"

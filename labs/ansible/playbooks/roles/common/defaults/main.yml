@@ -1,0 +1,11 @@
+---
+# ============================================================
+# roles/common/defaults/main.yml
+#
+# Default variables for the 'common' role.
+# These have the LOWEST priority — playbook vars, inventory vars,
+# and command-line -e vars all override these.
+# ============================================================
+
+managed_by: "Ansible"
+managed_dir: "/opt/managed"

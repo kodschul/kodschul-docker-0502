@@ -1,0 +1,13 @@
+---
+# ============================================================
+# roles/webserver/defaults/main.yml
+#
+# Default variable values for the webserver role.
+# Override any of these in the playbook's 'vars:' section.
+# ============================================================
+
+site_title: "Ansible Managed Server"
+server_port: 80
+web_root: "/var/www/html"
+server_name: "{{ inventory_hostname }}"
+body_color: "#1e1e2e"

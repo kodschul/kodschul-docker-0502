@@ -1,0 +1,12 @@
+---
+# ============================================================
+# roles/webserver/handlers/main.yml
+#
+# Handlers run ONCE at the end of the play, only if notified.
+# Multiple tasks can notify the same handler — it still runs once.
+# ============================================================
+
+- name: Reload nginx
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded

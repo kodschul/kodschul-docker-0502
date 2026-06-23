@@ -1,0 +1,85 @@
+---
+# ============================================================
+# Playbook 08 — Roles & Reusability
+#
+# A ROLE is a self-contained, reusable bundle of:
+#   tasks/      main.yml  → the steps to execute
+#   handlers/   main.yml  → react to changes (e.g. restart)
+#   defaults/   main.yml  → variable defaults (lowest priority)
+#   vars/       main.yml  → role-internal variables (higher priority)
+#   templates/  *.j2      → Jinja2 template files
+#   files/                → static files to copy
+#   meta/       main.yml  → role metadata and dependencies
+#
+# Why roles?
+#   One giant playbook becomes hard to maintain.
+#   Roles split it into reusable, testable units:
+#     roles/common/    → baseline packages on every server
+#     roles/webserver/ → nginx + config + landing page
+#     roles/database/  → postgresql install + config
+#   Then a playbook just COMPOSES them:
+#     - hosts: webservers
+#       roles:
+#         - common
+#         - webserver
+#
+# Role location: /playbooks/roles/<rolename>/
+# (Ansible searches for roles/ next to the playbook file.)
+#
+# Run: ansible-playbook /playbooks/08-roles.yml
+# ============================================================
+
+# ── Play 1: Apply 'common' baseline to all servers ─────────────
+- name: "Lab 08 — Common baseline on all servers"
+  hosts: servers
+
+  roles:
+    - role: common
+      # No var overrides — uses defaults from roles/common/defaults/main.yml
+
+# ── Play 2: Webserver role on server1 ──────────────────────────
+- name: "Lab 08 — Webserver role on server1"
+  hosts: server1
+
+  roles:
+    - role: webserver
+      vars:
+        # Override the role's defaults just for this host.
+        # The same role runs on server2 with DIFFERENT values below.
+        site_title: "Server 1 — Managed by Ansible Role"
+        server_port: 80
+        body_color: "#1e3a5f"   # dark blue
+
+# ── Play 3: Same role, different config on server2 ─────────────
+- name: "Lab 08 — Webserver role on server2"
+  hosts: server2
+
+  roles:
+    - role: webserver
+      vars:
+        site_title: "Server 2 — Same Role, Different Config"
+        server_port: 80
+        body_color: "#1e5f3a"   # dark green
+
+# ── Play 4: Verify both servers serve their pages ──────────────
+- name: "Lab 08 — Verify pages from server2 perspective"
+  hosts: server2
+
+  tasks:
+    - name: Fetch server1's page from server2
+      ansible.builtin.command: curl -s http://10.20.0.11/
+      register: server1_page
+      changed_when: false
+
+    - name: Show server1 page (visible from server2 via the Docker network)
+      ansible.builtin.debug:
+        msg: "{{ server1_page.stdout_lines }}"
+
+    - name: Fetch own page
+      ansible.builtin.command: curl -s http://localhost/
+      register: server2_page
+      changed_when: false
+
+    - name: Show server2 page
+      ansible.builtin.debug:
+        msg: "{{ server2_page.stdout_lines }}"

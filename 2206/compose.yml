@@ -1,0 +1,46 @@
+services:
+  frontend:
+    image: frontend:v2
+    build: frontend
+    ports:
+      - ${FE_PORT}:80
+
+    environment:
+      - BACKEND_URL=http://backend:90
+
+    develop:
+      watch:
+        - path: ./frontend/Dockerfile
+          action: rebuild
+
+    volumes:
+      - ./frontend:/app
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  backend:
+    image: backend
+    build: backend
+    deploy:
+      replicas: 1
+
+    volumes:
+      - ./backend:/app
+
+    healthcheck:
+      test: ["CMD", "curl", "localhost:90"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+      start_period: 1s
+
+    develop:
+      watch:
+        - path: ./backend/Dockerfile
+          action: rebuild
+
+  db:
+    image: busybox
+    command: sleep 100s

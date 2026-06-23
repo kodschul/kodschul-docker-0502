@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{{ site_title }}</title>
+  <style>
+    body  { font-family: monospace; background: {{ body_color }}; color: #cdd6f4; padding: 40px; }
+    h1    { color: #89b4fa; }
+    .box  { background: rgba(255,255,255,.08); padding: 20px; border-radius: 8px; margin: 20px 0; }
+    em    { color: #a6e3a1; }
+  </style>
+</head>
+<body>
+  <h1>{{ site_title }}</h1>
+  <div class="box">
+    <p><strong>Hostname :</strong> {{ ansible_hostname }}</p>
+    <p><strong>IP       :</strong> {{ ansible_default_ipv4.address }}</p>
+    <p><strong>OS       :</strong> {{ ansible_distribution }} {{ ansible_distribution_version }}</p>
+    <p><strong>Port     :</strong> {{ server_port }}</p>
+    <p><strong>Role     :</strong> webserver</p>
+  </div>
+  <p><em>Generated from roles/webserver/templates/index.html.j2</em></p>
+  <p><em>Edit that file and re-run the playbook to update this page.</em></p>
+</body>
+</html>

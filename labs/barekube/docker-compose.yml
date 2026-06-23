@@ -12,7 +12,6 @@
 # ============================================================
 
 services:
-
   # ──────────────────────────────────────────────────────────
   # CONTROL PLANE  (what kubeadm calls the "master")
   # Runs: kube-apiserver, etcd, kube-scheduler,

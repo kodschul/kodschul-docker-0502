@@ -1,0 +1,40 @@
+---
+# ============================================================
+# roles/common/tasks/main.yml
+#
+# These tasks run on EVERY server that uses the 'common' role.
+# Goal: bring every server to a consistent baseline state.
+# ============================================================
+
+- name: "[common] Update apt cache"
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600   # skip if cache is less than 1 hour old
+
+- name: "[common] Install baseline packages"
+  ansible.builtin.apt:
+    name:
+      - curl
+      - wget
+      - vim
+      - tree
+      - htop
+      - net-tools
+      - bash-completion
+    state: present
+
+- name: "[common] Create managed directory"
+  ansible.builtin.file:
+    path: "{{ managed_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "[common] Write Ansible-managed marker file"
+  ansible.builtin.copy:
+    dest: /etc/ansible-managed
+    content: |
+      This server is managed by Ansible.
+      Role    : common
+      Hostname: {{ inventory_hostname }}
+      Managed : {{ managed_by }}
+    mode: '0644'

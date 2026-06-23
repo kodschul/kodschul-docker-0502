@@ -1,0 +1,19 @@
+services:
+  frontend:
+    build: frontend
+    ports:
+      - 9000:80
+
+    environment:
+      - BACKEND_URL=http://backend:90
+
+    volumes:
+      - ./frontend:/app
+
+  backend:
+    build: backend
+    deploy:
+      replicas: 1
+
+    volumes:
+      - ./backend:/app

@@ -1,0 +1,278 @@
+---
+# ============================================================
+# Playbook 12 — SSL/TLS Certificate Management
+#
+# TLS certificates prove a server's identity and encrypt traffic.
+# Here we build a minimal PKI (Public Key Infrastructure):
+#
+#   1. Create a Certificate Authority (CA)
+#      The CA is our "trusted root" — it signs server certificates.
+#      Anyone who trusts the CA automatically trusts all certs it signs.
+#
+#   2. For each managed server:
+#      a. Generate a private key  (stays on the server, never leaves)
+#      b. Generate a CSR          (Certificate Signing Request — public info)
+#      c. Fetch the CSR           to the control node
+#      d. Sign the CSR with the CA → produces a signed certificate
+#      e. Deploy the certificate  back to the server
+#
+# Real-world uses:
+#   - Internal HTTPS for nginx / Apache / APIs
+#   - Mutual TLS (mTLS) between microservices
+#   - Database connections (PostgreSQL, MySQL)
+#
+# Modules used:
+#   command   → openssl CLI (works without extra collections)
+#   file      → create directories
+#   fetch     → download a file FROM the server TO the control node
+#   copy      → upload a file FROM the control node TO the server
+#   slurp     → read remote file into a variable
+#   wait_for  → (not used here, but useful to wait for services)
+#
+# Run: ansible-playbook /playbooks/12-ssl-certs.yml
+# ============================================================
+
+# ── Play 1: Create the Certificate Authority on the control node ─
+- name: "Lab 12 — Create Certificate Authority on control node"
+  hosts: localhost
+  connection: local
+
+  vars:
+    ca_dir: "/tmp/ansible-pki/ca"
+    ca_key: "{{ ca_dir }}/ca.key"
+    ca_cert: "{{ ca_dir }}/ca.crt"
+    ca_subject: "/C=DE/ST=Lab/L=Docker/O=AnsibleLab/CN=AnsibleLab-CA"
+    cert_days: 365
+
+  tasks:
+
+    - name: Create local PKI directory
+      ansible.builtin.file:
+        path: "{{ ca_dir }}"
+        state: directory
+        mode: '0700'   # private — only current user
+
+    # ── Step A: Generate the CA private key ───────────────
+    # 'creates:' makes it idempotent: skip if key already exists.
+    - name: Generate CA private key (2048-bit RSA)
+      ansible.builtin.command:
+        argv: [openssl, genrsa, -out, "{{ ca_key }}", "2048"]
+        creates: "{{ ca_key }}"
+
+    # ── Step B: Self-sign the CA certificate ─────────────
+    # The CA cert IS self-signed — it vouches for itself.
+    # Everything signed by this CA will be trusted by clients
+    # that have this CA cert in their trust store.
+    - name: Generate self-signed CA certificate
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - req
+          - -new
+          - -x509
+          - -key
+          - "{{ ca_key }}"
+          - -out
+          - "{{ ca_cert }}"
+          - -days
+          - "{{ cert_days }}"
+          - -subj
+          - "{{ ca_subject }}"
+        creates: "{{ ca_cert }}"
+
+    - name: Show CA certificate details
+      ansible.builtin.command: >
+        openssl x509 -in {{ ca_cert }} -noout -subject -issuer -dates
+      register: ca_info
+      changed_when: false
+
+    - name: Display CA info
+      ansible.builtin.debug:
+        msg: "{{ ca_info.stdout_lines }}"
+
+# ── Play 2: Generate private keys and CSRs on managed servers ───
+- name: "Lab 12 — Generate keys and CSRs on servers"
+  hosts: servers
+
+  vars:
+    ssl_dir: "/etc/ssl/ansible-lab"
+    cert_days: 365
+
+  tasks:
+
+    - name: Install openssl on managed nodes
+      ansible.builtin.apt:
+        name: openssl
+        state: present
+        update_cache: true
+
+    - name: Create SSL directory on server
+      ansible.builtin.file:
+        path: "{{ ssl_dir }}"
+        state: directory
+        mode: '0700'
+
+    # ── Step A: Generate server private key ──────────────
+    # The private key NEVER leaves the server.
+    # (In this demo it's fetched for signing, but in production
+    # you'd use a dedicated CA or ACME protocol instead.)
+    - name: Generate server private key
+      ansible.builtin.command:
+        argv: [openssl, genrsa, -out, "{{ ssl_dir }}/server.key", "2048"]
+        creates: "{{ ssl_dir }}/server.key"
+
+    - name: Set private key permissions
+      ansible.builtin.file:
+        path: "{{ ssl_dir }}/server.key"
+        mode: '0600'   # readable only by root
+
+    # ── Step B: Generate CSR ──────────────────────────────
+    # The CSR contains the server's public key and identity info.
+    # It is sent to the CA to be signed — it's safe to share.
+    - name: Generate Certificate Signing Request (CSR)
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - req
+          - -new
+          - -key
+          - "{{ ssl_dir }}/server.key"
+          - -out
+          - "{{ ssl_dir }}/server.csr"
+          - -subj
+          - "/C=DE/ST=Lab/L=Docker/O=AnsibleLab/CN={{ inventory_hostname }}"
+        creates: "{{ ssl_dir }}/server.csr"
+
+    # ── Step C: Fetch CSR to the control node ────────────
+    # 'fetch' is the reverse of 'copy':
+    #   copy  → control node  →  managed server
+    #   fetch → managed server →  control node
+    - name: Fetch CSR to control node for signing
+      ansible.builtin.fetch:
+        src: "{{ ssl_dir }}/server.csr"
+        dest: "/tmp/ansible-pki/ca/{{ inventory_hostname }}.csr"
+        flat: true   # flat=true  → save as ca/server1.csr
+                     # flat=false → save as ca/<hostname>/etc/ssl/.../server.csr
+
+# ── Play 3: Sign the CSRs with the CA (on the control node) ─────
+- name: "Lab 12 — Sign CSRs with the CA"
+  hosts: localhost
+  connection: local
+
+  vars:
+    ca_dir: "/tmp/ansible-pki/ca"
+    cert_days: 365
+
+  tasks:
+
+    # Sign each server's CSR with the CA key → produces a .crt file.
+    # -CAcreateserial creates ca.srl (serial number tracker).
+    - name: Sign certificates for all servers
+      ansible.builtin.command:
+        argv:
+          - openssl
+          - x509
+          - -req
+          - -in
+          - "{{ ca_dir }}/{{ item }}.csr"
+          - -CA
+          - "{{ ca_dir }}/ca.crt"
+          - -CAkey
+          - "{{ ca_dir }}/ca.key"
+          - -CAcreateserial
+          - -out
+          - "{{ ca_dir }}/{{ item }}.crt"
+          - -days
+          - "{{ cert_days }}"
+        creates: "{{ ca_dir }}/{{ item }}.crt"
+      loop:
+        - server1
+        - server2
+
+    - name: Verify signed certificates against the CA
+      ansible.builtin.command: >
+        openssl verify -CAfile {{ ca_dir }}/ca.crt {{ ca_dir }}/{{ item }}.crt
+      register: verify_results
+      changed_when: false
+      loop:
+        - server1
+        - server2
+
+    - name: Show verification results
+      ansible.builtin.debug:
+        msg: "{{ item.stdout }}"
+      loop: "{{ verify_results.results }}"
+      loop_control:
+        label: "{{ item.item }}"   # show the server name, not the full item dict
+
+# ── Play 4: Deploy certificates back to the servers ─────────────
+- name: "Lab 12 — Deploy signed certificates to servers"
+  hosts: servers
+
+  vars:
+    ssl_dir: "/etc/ssl/ansible-lab"
+    ca_dir: "/tmp/ansible-pki/ca"
+
+  tasks:
+
+    # Deploy the server's signed certificate
+    - name: Deploy signed server certificate
+      ansible.builtin.copy:
+        src: "{{ ca_dir }}/{{ inventory_hostname }}.crt"
+        dest: "{{ ssl_dir }}/server.crt"
+        mode: '0644'   # certificate is public — no need to restrict
+
+    # Deploy the CA certificate so the server can validate peer certs
+    - name: Deploy CA certificate (for peer verification)
+      ansible.builtin.copy:
+        src: "{{ ca_dir }}/ca.crt"
+        dest: "{{ ssl_dir }}/ca.crt"
+        mode: '0644'
+
+    # Verify the certificate details on the server
+    - name: Show certificate subject, issuer, and validity
+      ansible.builtin.command: >
+        openssl x509 -in {{ ssl_dir }}/server.crt
+          -noout -subject -issuer -dates
+      register: cert_info
+      changed_when: false
+
+    - name: Display certificate details
+      ansible.builtin.debug:
+        msg: "{{ cert_info.stdout_lines }}"
+
+    # Final chain verification: server cert signed by our CA
+    - name: Verify certificate chain on the server
+      ansible.builtin.command: >
+        openssl verify -CAfile {{ ssl_dir }}/ca.crt {{ ssl_dir }}/server.crt
+      register: chain_verify
+      changed_when: false
+
+    - name: Show chain verification
+      ansible.builtin.debug:
+        msg: "Chain: {{ chain_verify.stdout }}"
+
+    # ── Bonus: Use the cert with nginx ────────────────────
+    # Uncommenting these tasks adds HTTPS to the nginx server.
+    # Requires nginx from playbook 07 or 08 to be installed first.
+    #
+    # - name: Deploy HTTPS nginx config
+    #   ansible.builtin.copy:
+    #     dest: /etc/nginx/sites-available/https-lab
+    #     content: |
+    #       server {
+    #           listen 443 ssl;
+    #           server_name {{ inventory_hostname }};
+    #           ssl_certificate     {{ ssl_dir }}/server.crt;
+    #           ssl_certificate_key {{ ssl_dir }}/server.key;
+    #           root /var/www/html;
+    #           index index.html;
+    #       }
+    #   notify: Reload nginx
+    #
+    # - name: Enable HTTPS site
+    #   ansible.builtin.file:
+    #     src: /etc/nginx/sites-available/https-lab
+    #     dest: /etc/nginx/sites-enabled/https-lab
+    #     state: link
+    #   notify: Reload nginx

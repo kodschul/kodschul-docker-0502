@@ -1,0 +1,189 @@
+---
+# ============================================================
+# Playbook 09 — Samba (SMB/CIFS File Sharing)
+#
+# Samba lets Linux appear as a Windows file server.
+# Windows and Linux clients connect via the SMB protocol.
+#
+# Architecture:
+#   smbd  — serves files and handles authentication
+#   nmbd  — NetBIOS name service (makes the server findable by name)
+#
+# Real-world use cases:
+#   - Department file shares accessible from Windows desktops
+#   - Home directory servers for mixed Linux/Windows networks
+#   - Legacy application storage that speaks SMB
+#
+# Modules used:
+#   apt     → install packages
+#   file    → create directories
+#   copy    → write smb.conf with inline template content
+#   command → testparm, smbpasswd, smbclient (test)
+#   user    → create OS user
+#   service → start smbd and nmbd
+#
+# Run: ansible-playbook /playbooks/09-samba.yml
+# ============================================================
+
+- name: "Lab 09 — Samba file server"
+  hosts: server1    # install Samba only on server1
+
+  vars:
+    samba_workgroup: "LABGROUP"
+    samba_description: "Ansible Lab Samba Server"
+    samba_share_name: "shared"
+    samba_share_path: "/srv/samba/shared"
+    samba_user: "labuser"
+    samba_password: "Lab@1234"
+    # PRODUCTION NOTE: never store passwords in plaintext.
+    # Use ansible-vault:
+    #   ansible-vault encrypt_string 'Lab@1234' --name samba_password
+    # Then run playbook with: ansible-playbook ... --ask-vault-pass
+
+  handlers:
+    - name: Restart smbd
+      ansible.builtin.service:
+        name: smbd
+        state: restarted
+      failed_when: false   # smbd may not have systemd in Docker; non-fatal
+
+  tasks:
+
+    # ── Task 1: Install Samba packages ────────────────────
+    - name: Install Samba
+      ansible.builtin.apt:
+        name:
+          - samba          # SMB server daemon (smbd + nmbd)
+          - samba-common   # shared config utilities
+          - smbclient      # command-line client — for testing
+        state: present
+        update_cache: true
+
+    # ── Task 2: Create the share directory ────────────────
+    - name: Create Samba share directory
+      ansible.builtin.file:
+        path: "{{ samba_share_path }}"
+        state: directory
+        mode: '0777'   # open for demo; use ACLs in production
+
+    # ── Task 3: Create OS user that will own the share ────
+    # Samba needs a matching OS user entry even for guest shares.
+    - name: Create OS user for Samba
+      ansible.builtin.user:
+        name: "{{ samba_user }}"
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    # ── Task 4: Put a sample file into the share ──────────
+    - name: Add a README to the share
+      ansible.builtin.copy:
+        dest: "{{ samba_share_path }}/README.txt"
+        content: |
+          Welcome to the Samba share on {{ inventory_hostname }}.
+          Configured by Ansible — do not edit smb.conf manually.
+          Share path: {{ samba_share_path }}
+        mode: '0644'
+
+    # ── Task 5: Back up the original smb.conf ────────────
+    - name: Back up original smb.conf (once)
+      ansible.builtin.copy:
+        src: /etc/samba/smb.conf
+        dest: /etc/samba/smb.conf.bak
+        remote_src: true   # src is on the remote server, NOT the control node
+        force: false       # do not overwrite if backup already exists
+
+    # ── Task 6: Write smb.conf using variables ────────────
+    # Ansible's 'copy' module with 'content:' works like an
+    # inline template — {{ }} variables are substituted.
+    - name: Deploy smb.conf
+      ansible.builtin.copy:
+        dest: /etc/samba/smb.conf
+        mode: '0644'
+        content: |
+          # smb.conf — managed by Ansible
+          # Do NOT edit manually; changes will be overwritten.
+          [global]
+              workgroup            = {{ samba_workgroup }}
+              server string        = {{ samba_description }}
+              server role          = standalone server
+              log file             = /var/log/samba/log.%m
+              max log size         = 1000
+              # Only allow traffic from our lab network
+              hosts allow          = 10.20.0. 127.
+              hosts deny           = 0.0.0.0/0
+
+          [{{ samba_share_name }}]
+              comment              = Public shared folder
+              path                 = {{ samba_share_path }}
+              browseable           = yes
+              writable             = yes
+              guest ok             = yes
+              read only            = no
+              create mask          = 0666
+              directory mask       = 0777
+      notify: Restart smbd
+
+    # ── Task 7: Validate smb.conf syntax ─────────────────
+    - name: Validate smb.conf with testparm
+      ansible.builtin.command: testparm -s /etc/samba/smb.conf
+      register: testparm_out
+      changed_when: false
+      failed_when: testparm_out.rc != 0
+
+    - name: Show testparm output
+      ansible.builtin.debug:
+        msg: "{{ testparm_out.stdout_lines }}"
+
+    # ── Task 8: Set Samba password ────────────────────────
+    # Samba keeps its OWN password database (separate from /etc/shadow).
+    # 'smbpasswd -a' adds or updates a user in that database.
+    - name: Set Samba password for user
+      ansible.builtin.shell: >
+        printf '{{ samba_password }}\n{{ samba_password }}\n'
+        | smbpasswd -a -s {{ samba_user }}
+      changed_when: false   # smbpasswd always exits 0; treat as no-change
+      no_log: true          # hide the password from Ansible output
+
+    # ── Task 9: Start Samba services ──────────────────────
+    - name: Start and enable smbd
+      ansible.builtin.service:
+        name: smbd
+        state: started
+        enabled: true
+      failed_when: false   # non-fatal in minimal Docker container
+
+    - name: Start and enable nmbd
+      ansible.builtin.service:
+        name: nmbd
+        state: started
+        enabled: true
+      failed_when: false
+
+    # ── Task 10: Test with smbclient ─────────────────────
+    # smbclient lists the shares the server is advertising.
+    - name: List Samba shares via smbclient
+      ansible.builtin.command: >
+        smbclient -L localhost
+          -U {{ samba_user }}%{{ samba_password }}
+          --no-pass
+      register: smb_list
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Show available shares
+      ansible.builtin.debug:
+        msg: "{{ smb_list.stdout_lines }}"
+
+    # ── Task 11: Show how to mount from another Linux host ─
+    - name: Print mount instructions
+      ansible.builtin.debug:
+        msg:
+          - "To mount this share from another Linux machine:"
+          - "  apt install cifs-utils"
+          - "  mkdir /mnt/samba"
+          - "  mount -t cifs //10.20.0.11/{{ samba_share_name }} /mnt/samba \\"
+          - "        -o username={{ samba_user }},password={{ samba_password }}"
+          - ""
+          - "Or from Windows: \\\\ 10.20.0.11 \\ {{ samba_share_name }}"

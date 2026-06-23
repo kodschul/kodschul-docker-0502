@@ -1,0 +1,162 @@
+---
+# ============================================================
+# Playbook 13 — Best Practices Demo
+#
+# Demonstrates the most important Ansible best practices:
+#   - Fully Qualified Collection Names (FQCN)
+#   - changed_when / failed_when
+#   - Tags
+#   - Secrets with no_log
+#   - Blocks with rescue / always
+#   - assert for pre-flight checks
+#   - Proper naming conventions
+# ============================================================
+
+- name: "Lab 13 — Best Practices Demonstration"
+  hosts: servers
+  gather_facts: true
+
+  vars:
+    app_dir: "/opt/bestpractice-demo"
+    # Never hardcode real secrets — use ansible-vault in production.
+    # This is only for demo purposes:
+    demo_secret: "{{ lookup('env', 'DEMO_SECRET') | default('changeme', true) }}"
+
+  # ── Tags ────────────────────────────────────────────────────────
+  # Run only tagged tasks with:
+  #   ansible-playbook 13-best-practices.yml --tags preflight
+  #   ansible-playbook 13-best-practices.yml --tags setup
+  #   ansible-playbook 13-best-practices.yml --tags cleanup
+  # Skip a tag with:
+  #   ansible-playbook 13-best-practices.yml --skip-tags cleanup
+
+  tasks:
+
+    # ── 1. Pre-flight assertions ───────────────────────────────────
+    # Fail fast with a clear message if requirements are not met.
+    - name: "PREFLIGHT | Verify Ansible version is recent enough"
+      ansible.builtin.assert:
+        that:
+          - ansible_version.major >= 2
+          - ansible_version.minor >= 9
+        fail_msg: "Ansible >= 2.9 required. Found: {{ ansible_version.full }}"
+        success_msg: "Ansible version OK: {{ ansible_version.full }}"
+      tags: preflight
+
+    - name: "PREFLIGHT | Verify we are running on Ubuntu"
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == "Ubuntu"
+        fail_msg: "This playbook targets Ubuntu only. Found: {{ ansible_distribution }}"
+        success_msg: "OS check passed: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+      tags: preflight
+
+    # ── 2. FQCN — always use fully qualified module names ──────────
+    # Bad:  apt:            Good: ansible.builtin.apt:
+    # Bad:  copy:           Good: ansible.builtin.copy:
+    # Bad:  shell:          Good: ansible.builtin.shell:
+    - name: "SETUP | Create application directory (FQCN example)"
+      ansible.builtin.file:          # ← FQCN: namespace.collection.module
+        path: "{{ app_dir }}"
+        state: directory
+        mode: "0755"
+      tags: setup
+
+    # ── 3. changed_when — avoid false positives ───────────────────
+    # Without changed_when, 'command' always reports changed=true.
+    - name: "SETUP | Read system uptime (never changes the system)"
+      ansible.builtin.command: uptime
+      register: uptime_result
+      changed_when: false            # ← This task NEVER changes anything
+      tags: setup
+
+    - name: "SETUP | Show uptime"
+      ansible.builtin.debug:
+        msg: "Uptime on {{ inventory_hostname }}: {{ uptime_result.stdout }}"
+      tags: setup
+
+    # ── 4. failed_when — custom failure conditions ─────────────────
+    - name: "SETUP | Run a command and fail only on critical error"
+      ansible.builtin.shell: |
+        echo "Return code simulation: OK"
+        exit 0
+      register: check_result
+      changed_when: false
+      failed_when:
+        - check_result.rc != 0
+        - "'CRITICAL' in check_result.stdout"   # fail only on CRITICAL keyword
+      tags: setup
+
+    # ── 5. Blocks — group tasks with error handling ────────────────
+    - name: "SETUP | Write demo config file"
+      tags: setup
+      block:
+        - name: "SETUP | Deploy config"
+          ansible.builtin.copy:
+            dest: "{{ app_dir }}/app.conf"
+            content: |
+              [app]
+              host     = {{ inventory_hostname }}
+              ip       = {{ ansible_default_ipv4.address }}
+              managed  = true
+            mode: "0640"
+
+        - name: "SETUP | Verify config is readable"
+          ansible.builtin.command: cat "{{ app_dir }}/app.conf"
+          register: conf_verify
+          changed_when: false
+
+      rescue:
+        # Runs if ANY task in the block above fails
+        - name: "RESCUE | Config deployment failed — write fallback"
+          ansible.builtin.copy:
+            dest: "{{ app_dir }}/app.conf"
+            content: "[app]\nfallback=true\n"
+            mode: "0640"
+
+      always:
+        # Runs regardless of success or failure
+        - name: "ALWAYS | Log deployment attempt"
+          ansible.builtin.copy:
+            dest: "{{ app_dir }}/deploy.log"
+            content: "Deployed at {{ ansible_date_time.iso8601 }} on {{ inventory_hostname }}\n"
+            mode: "0644"
+
+    # ── 6. no_log — hide sensitive values from output ─────────────
+    - name: "SETUP | Write a file containing a secret (no_log demo)"
+      ansible.builtin.copy:
+        dest: "{{ app_dir }}/secret.txt"
+        content: "secret={{ demo_secret }}\n"
+        mode: "0600"
+      no_log: true           # ← hides task parameters from terminal output
+      tags: setup
+
+    # ── 7. Descriptive task names (role prefix pattern) ───────────
+    # Good naming: "[ROLE | ACTION | what/where]"
+    # This makes long playbook output readable at a glance.
+    - name: "VERIFY | Confirm all expected files exist"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: file_stat
+      loop:
+        - "{{ app_dir }}/app.conf"
+        - "{{ app_dir }}/deploy.log"
+        - "{{ app_dir }}/secret.txt"
+      tags: verify
+
+    - name: "VERIFY | Assert all files are present"
+      ansible.builtin.assert:
+        that: item.stat.exists
+        fail_msg: "Missing file: {{ item.item }}"
+      loop: "{{ file_stat.results }}"
+      tags: verify
+
+    # ── 8. Cleanup (tagged, skippable) ────────────────────────────
+    - name: "CLEANUP | Remove demo directory"
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: absent
+      tags:
+        - cleanup
+        - never        # ← 'never' means this tag is SKIPPED by default
+                       #   Run it explicitly: --tags cleanup

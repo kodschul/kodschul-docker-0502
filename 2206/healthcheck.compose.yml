@@ -1,0 +1,34 @@
+services:
+  frontend:
+    build: frontend
+    ports:
+      - 9000:80
+
+    environment:
+      - BACKEND_URL=http://backend:90
+
+    volumes:
+      - ./frontend:/app
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  backend:
+    build: backend
+    deploy:
+      replicas: 1
+
+    volumes:
+      - ./backend:/app
+
+    healthcheck:
+      test: ["CMD", "curl", "localhost:90"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+      start_period: 10s
+
+  db:
+    image: busybox
+    command: sleep 100s

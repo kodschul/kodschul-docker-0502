@@ -1,0 +1,177 @@
+---
+# ============================================================
+# Playbook 11 — SSH Key Distribution
+#
+# In real environments you need to:
+#   - Create service/deploy accounts on many servers at once
+#   - Distribute a public key so CI/CD tools or scripts can SSH in
+#   - Revoke access by removing specific keys (without touching others)
+#
+# Modules used:
+#   command          → ssh-keygen to generate the key pair
+#   slurp            → read a file from ANY host into a variable
+#   set_fact         → store a value as a variable
+#   user             → create OS user accounts
+#   file             → create .ssh directory with correct permissions
+#   authorized_key   → manage authorized_keys in an idempotent way
+#   delegate_to      → run a task on a DIFFERENT host than the current one
+#
+# KEY CONCEPT — delegate_to:
+#   Normally, each task runs on the 'hosts:' target.
+#   delegate_to: localhost runs the task on the control node instead.
+#   Useful for: local key generation, local API calls, etc.
+#
+# Run: ansible-playbook /playbooks/11-ssh-keys.yml
+# ============================================================
+
+# ── Play 1: Generate a deploy SSH key pair on the CONTROL NODE ──
+- name: "Lab 11 — Generate deploy SSH key on control node"
+  hosts: localhost      # 'localhost' = the control container itself
+  connection: local     # no SSH tunnel — already running locally
+
+  vars:
+    deploy_key_path: "/tmp/deploy_id_rsa"
+
+  tasks:
+
+    - name: Generate RSA key pair for 'deploy' user
+      ansible.builtin.command:
+        argv:
+          - ssh-keygen
+          - -t
+          - rsa
+          - -b
+          - "2048"
+          - -f
+          - "{{ deploy_key_path }}"
+          - -N        # empty passphrase (for automation)
+          - ""
+          - -C
+          - "deploy@ansible-lab"
+        creates: "{{ deploy_key_path }}"
+      # 'creates:' makes this idempotent:
+      # if the file already exists, the command is skipped.
+
+    - name: Read the generated public key into a variable
+      ansible.builtin.slurp:
+        src: "{{ deploy_key_path }}.pub"
+      register: pubkey_raw
+      # slurp returns the file content as base64.
+      # Decode it with the b64decode filter.
+
+    - name: Store public key as a host fact
+      ansible.builtin.set_fact:
+        deploy_public_key: "{{ pubkey_raw.content | b64decode | trim }}"
+
+    - name: Show the public key (so you can see what will be distributed)
+      ansible.builtin.debug:
+        msg: "{{ deploy_public_key }}"
+
+# ── Play 2: Create 'deploy' user and install the key on servers ─
+- name: "Lab 11 — Create deploy user and install key on servers"
+  hosts: servers
+
+  vars:
+    deploy_user: "deploy"
+    deploy_key_path: "/tmp/deploy_id_rsa"
+
+  tasks:
+
+    # ── Task 1: Create the deploy OS user ─────────────────
+    - name: Create 'deploy' user on managed node
+      ansible.builtin.user:
+        name: "{{ deploy_user }}"
+        shell: /bin/bash
+        create_home: true
+        comment: "Deploy automation account — managed by Ansible"
+        state: present
+
+    # ── Task 2: Ensure .ssh directory exists ──────────────
+    # Permissions MUST be exactly 0700 — sshd refuses looser settings.
+    - name: Create .ssh directory for deploy user
+      ansible.builtin.file:
+        path: "/home/{{ deploy_user }}/.ssh"
+        state: directory
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: '0700'
+
+    # ── Task 3: Install the public key ────────────────────
+    # authorized_key is IDEMPOTENT:
+    #   - adds the key if not present
+    #   - does nothing if already present
+    #   - removes other keys only if exclusive: true
+    - name: Install deploy public key in authorized_keys
+      ansible.posix.authorized_key:
+        user: "{{ deploy_user }}"
+        state: present
+        key: "{{ hostvars['localhost']['deploy_public_key'] }}"
+        comment: "deploy key — managed by Ansible"
+        exclusive: false   # false = APPEND (keep existing keys)
+                           # true  = REPLACE ALL (dangerous for root!)
+
+    # ── Task 4: Verify the authorized_keys file ───────────
+    - name: Show the authorized_keys file on the server
+      ansible.builtin.command: cat /home/{{ deploy_user }}/.ssh/authorized_keys
+      register: auth_keys
+      changed_when: false
+
+    - name: Display authorized_keys
+      ansible.builtin.debug:
+        msg: "{{ auth_keys.stdout_lines }}"
+
+    # ── Task 5: Test SSH login as 'deploy' ────────────────
+    # delegate_to: localhost → this command runs on the CONTROL NODE,
+    # but the loop variable (ansible_host) still holds the current server's IP.
+    - name: Test SSH connection as deploy user
+      ansible.builtin.command: >
+        ssh
+          -i {{ deploy_key_path }}
+          -o StrictHostKeyChecking=no
+          -o UserKnownHostsFile=/dev/null
+          {{ deploy_user }}@{{ ansible_host }}
+          "echo 'SSH login as {{ deploy_user }} on {{ inventory_hostname }} works!'"
+      delegate_to: localhost   # run the SSH command FROM the control node
+      register: ssh_test
+      changed_when: false
+
+    - name: Show SSH test result
+      ansible.builtin.debug:
+        msg: "{{ ssh_test.stdout }}"
+
+# ── Play 3: Revoke access (remove a key from server2) ──────────
+- name: "Lab 11 — Revoke deploy access on server2"
+  hosts: server2
+
+  vars:
+    deploy_user: "deploy"
+
+  tasks:
+
+    - name: Remove the deploy key from server2
+      ansible.posix.authorized_key:
+        user: "{{ deploy_user }}"
+        state: absent
+        key: "{{ hostvars['localhost']['deploy_public_key'] }}"
+        # state: absent removes ONLY this specific key.
+        # Other keys in authorized_keys are left untouched.
+        # The user account itself is NOT removed.
+
+    - name: Confirm the key was removed
+      ansible.builtin.command: >
+        cat /home/{{ deploy_user }}/.ssh/authorized_keys
+      register: keys_after
+      changed_when: false
+      failed_when: false   # file may now be empty
+
+    - name: Show remaining keys (should be empty)
+      ansible.builtin.debug:
+        msg: "{{ keys_after.stdout_lines | default(['(no keys remaining)']) }}"
+
+    # ── Key is still on server1 ───────────────────────────
+    - name: Remind user that server1 still has the key
+      ansible.builtin.debug:
+        msg:
+          - "server2: key REMOVED"
+          - "server1: key STILL PRESENT"
+          - "Re-run play 2 to re-add it, or modify the key distribution scope."
