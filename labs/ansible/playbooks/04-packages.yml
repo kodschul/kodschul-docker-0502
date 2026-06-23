@@ -1,0 +1,75 @@
+---
+# ============================================================
+# Playbook 04 — Install packages with apt
+#
+# The 'apt' module manages packages on Debian/Ubuntu systems.
+# Ansible has similar modules for other package managers:
+#   yum / dnf  → Red Hat / CentOS / Fedora
+#   pacman     → Arch Linux
+#   homebrew   → macOS
+#
+# Key states:
+#   present  → install if not already installed
+#   absent   → remove the package
+#   latest   → install or upgrade to the latest version
+#
+# Run: ansible-playbook /playbooks/04-packages.yml
+# ============================================================
+
+- name: "Lab 04 — Install packages on managed nodes"
+  hosts: servers
+  # become: true would switch to sudo — not needed here since we're root
+
+  tasks:
+    # ── Task 1: Update the package cache ────────────────────
+    - name: Update apt package cache
+      ansible.builtin.apt:
+        update_cache: true
+        # cache_valid_time: 3600 means "skip update if cache
+        # is younger than 1 hour" — avoids unnecessary network traffic
+        cache_valid_time: 3600
+
+    # ── Task 2: Install a single package ────────────────────
+    - name: Install htop (a process viewer)
+      ansible.builtin.apt:
+        name: htop
+        state: present # install it if missing; do nothing if present
+
+    # ── Task 3: Install multiple packages at once ────────────
+    - name: Install a list of useful packages
+      ansible.builtin.apt:
+        name:
+          - tree # show directory tree
+          - jq # parse JSON from the command line
+          - ncdu # disk usage analyzer
+        state: present
+
+    # ── Task 4: Verify installation ─────────────────────────
+    - name: Check htop version
+      ansible.builtin.command: htop --version
+      register: htop_version
+      changed_when: false
+
+    - name: Show htop version
+      ansible.builtin.debug:
+        msg: "{{ htop_version.stdout }}"
+
+    # ── Task 5: Install a specific version ──────────────────
+    # Uncomment to try:
+    # - name: Install a specific version of curl
+    #   ansible.builtin.apt:
+    #     name: "curl=7.81.0-1ubuntu1.20"   # version pinning
+    #     state: present
+
+    # ── Task 6: Remove a package ────────────────────────────
+    - name: Remove ncdu (demonstration of state=absent)
+      ansible.builtin.apt:
+        name: ncdu
+        state: absent
+        # purge: true  would also remove config files
+      register: remove_result
+
+    - name: Show removal result
+      ansible.builtin.debug:
+        msg: "ncdu was {{ 'removed' if remove_result.changed else 'already absent' }}"
+        # .changed is true when Ansible actually did something

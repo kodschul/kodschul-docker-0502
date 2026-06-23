@@ -1,0 +1,81 @@
+---
+# ============================================================
+# Playbook 03 — Gather and display system facts
+#
+# Ansible automatically collects "facts" about each managed
+# node before running tasks.  Facts are variables like:
+#   ansible_hostname          → server1
+#   ansible_os_family         → Debian
+#   ansible_distribution      → Ubuntu
+#   ansible_distribution_version → 22.04
+#   ansible_processor_cores   → 2
+#   ansible_memtotal_mb       → 1024
+#   ansible_default_ipv4.address → 10.20.0.11
+#
+# You can use any fact in your tasks as {{ fact_name }}.
+#
+# Run: ansible-playbook /playbooks/03-facts.yml
+#
+# BONUS — See ALL facts for a host (a huge JSON dump):
+#   ansible server1 -m setup
+# ============================================================
+
+- name: "Lab 03 — Explore system facts"
+  hosts: servers
+  # gather_facts: true is the default — no need to set it explicitly
+
+  tasks:
+    # ── Task 1: Display a system summary using facts ────────
+    - name: Print a system summary
+      ansible.builtin.debug:
+        msg:
+          - "=== System Report for {{ ansible_hostname }} ==="
+          - "OS        : {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "Kernel    : {{ ansible_kernel }}"
+          - "Arch      : {{ ansible_architecture }}"
+          - "CPU cores : {{ ansible_processor_vcpus }}"
+          - "RAM (MB)  : {{ ansible_memtotal_mb }}"
+          - "IP address: {{ ansible_default_ipv4.address }}"
+          - "Python    : {{ ansible_python_version }}"
+
+    # ── Task 2: Write a fact report to a file ───────────────
+    - name: Write system report to a file on the server
+      ansible.builtin.copy:
+        dest: /tmp/system-report.txt
+        content: |
+          System Report
+          =============
+          Hostname   : {{ ansible_hostname }}
+          FQDN       : {{ ansible_fqdn }}
+          OS         : {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Kernel     : {{ ansible_kernel }}
+          CPU cores  : {{ ansible_processor_vcpus }}
+          RAM (MB)   : {{ ansible_memtotal_mb }}
+          Free  (MB) : {{ ansible_memfree_mb }}
+          Disk mounts:
+          {% for mount in ansible_mounts %}
+            {{ mount.mount }} — {{ (mount.size_available / 1024 / 1024) | int }} MB free
+          {% endfor %}
+
+    # ── Task 3: Read the report back ────────────────────────
+    - name: Show the report
+      ansible.builtin.command: cat /tmp/system-report.txt
+      register: report
+      changed_when: false
+
+    - name: Display report
+      ansible.builtin.debug:
+        msg: "{{ report.stdout_lines }}"
+
+    # ── Task 4: Use facts to make decisions (when:) ─────────
+    - name: Show a message only on server1
+      ansible.builtin.debug:
+        msg: "I am server1 and I know it!"
+      when: inventory_hostname == "server1"
+      # 'when' is a conditional — the task only runs if true.
+      # server2 will show: "skipping"
+
+    - name: Show message only when RAM > 100 MB
+      ansible.builtin.debug:
+        msg: "{{ ansible_hostname }} has enough RAM ({{ ansible_memtotal_mb }} MB)"
+      when: ansible_memtotal_mb > 100

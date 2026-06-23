@@ -1,0 +1,40 @@
+---
+# ============================================================
+# Playbook 01 — Verify connectivity
+#
+# The "ping" module is the simplest Ansible module.
+# It does NOT send an ICMP ping. Instead it:
+#   1. SSH-es into each host
+#   2. Runs a tiny Python script
+#   3. Expects a "pong" response
+#
+# If this works → Ansible can reach the server and Python works.
+#
+# Run this playbook:
+#   ansible-playbook /playbooks/01-ping.yml
+#
+# Or use the ad-hoc version (no playbook file needed):
+#   ansible all -m ping
+# ============================================================
+
+- name: "Lab 01 — Verify connectivity to all managed nodes"
+  hosts: servers # targets the [servers] group in inventory
+  gather_facts: false # skip fact collection (faster for a ping test)
+
+  tasks:
+    - name: Ping the server via Ansible
+      ansible.builtin.ping:
+      # Expected output:
+      #   server1 | SUCCESS => { "ping": "pong" }
+      #   server2 | SUCCESS => { "ping": "pong" }
+
+    - name: Run a simple shell command on the remote server
+      ansible.builtin.command: echo "Hello from {{ inventory_hostname }}!"
+      register: hello_output # save the output into a variable
+      changed_when: false # this command never "changes" anything
+
+    - name: Show the output
+      ansible.builtin.debug:
+        msg: "{{ hello_output.stdout }}"
+        # debug prints a message in Ansible output
+        # {{ ... }} is Jinja2 template syntax — like f-strings in Python

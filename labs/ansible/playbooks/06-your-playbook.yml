@@ -1,0 +1,134 @@
+---
+# ============================================================
+# Playbook 06 — Write Your Own Playbook  (Exercise)
+#
+# This is an exercise template.  Your goal:
+#   Create a playbook that sets up a simple "website" on both
+#   servers by creating an HTML file.
+#
+# Instructions:
+#   1. Fill in the TODO sections below.
+#   2. Run the playbook:
+#        ansible-playbook /playbooks/06-your-playbook.yml
+#   3. Verify:
+#        ansible servers -m command -a "cat /var/www/index.html"
+#
+# Hints are provided as comments.
+#
+# Bonus challenges at the bottom!
+# ============================================================
+
+- name: "Lab 06 — Exercise: Set up a simple website"
+  hosts: servers # TODO: change to 'server1' to only target one server
+
+  vars:
+    # TODO: Fill in your name (will appear on the webpage)
+    author_name: "Your Name Here"
+
+    # TODO: Pick a color (will be the background color)
+    background_color: "#f0f0f0"
+
+    # The directory where the HTML file will live
+    web_root: "/var/www"
+
+  tasks:
+    # ── Task 1: Create the web root directory ───────────────
+    # TODO: Use the 'file' module to create {{ web_root }}
+    # Hint: Look at how 02-files.yml creates /opt/ansible-lab
+    - name: Create web root directory
+      ansible.builtin.file:
+        path: "{{ web_root }}"
+        state: directory
+        mode: "0755"
+
+    # ── Task 2: Create the HTML file ────────────────────────
+    # TODO: Use the 'copy' module to write an HTML page to
+    #       {{ web_root }}/index.html
+    # The content should:
+    #   - Be valid HTML
+    #   - Include {{ author_name }} somewhere
+    #   - Include {{ ansible_hostname }} somewhere
+    #   - Use {{ background_color }} as the page background
+    #
+    - name: Write the HTML page
+      ansible.builtin.copy:
+        dest: "{{ web_root }}/index.html"
+        mode: "0644"
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Ansible Lab</title>
+            <style>
+              body {
+                background-color: {{ background_color }};
+                font-family: monospace;
+                padding: 40px;
+              }
+            </style>
+          </head>
+          <body>
+            <h1>Managed by Ansible</h1>
+            <!-- TODO: Add more content using your variables -->
+            <p>Author: {{ author_name }}</p>
+            <p>Server: {{ ansible_hostname }}</p>
+            <p>IP: {{ ansible_host }}</p>
+          </body>
+          </html>
+
+    # ── Task 3: Verify the file exists ──────────────────────
+    # TODO: Use the 'stat' module to check that the file exists,
+    #       then print a success message.
+    # Hint:
+    #   - name: Check file exists
+    #     ansible.builtin.stat:
+    #       path: {{ web_root }}/index.html
+    #     register: html_stat
+    #
+    #   - name: Confirm
+    #     ansible.builtin.debug:
+    #       msg: "File exists: {{ html_stat.stat.exists }}"
+    #
+    - name: Check the HTML file was created
+      ansible.builtin.stat:
+        path: "{{ web_root }}/index.html"
+      register: html_stat
+
+    - name: Report success
+      ansible.builtin.debug:
+        msg: >
+          {{ web_root }}/index.html exists on {{ inventory_hostname }}:
+          {{ html_stat.stat.exists }}
+
+    # ── Task 4: Show the file contents ──────────────────────
+    - name: Display the HTML file
+      ansible.builtin.command: cat "{{ web_root }}/index.html"
+      register: html_content
+      changed_when: false
+
+    - name: Print the HTML
+      ansible.builtin.debug:
+        msg: "{{ html_content.stdout_lines }}"
+# ============================================================
+# BONUS CHALLENGES
+# (Add them as new tasks above)
+#
+# 1. Create a different HTML file on server1 vs server2
+#    Hint: use  when: inventory_hostname == "server1"
+#
+# 2. Add a task that writes the current date into the file
+#    Hint: {{ ansible_date_time.date }}  is a fact
+#
+# 3. Add a handler that only runs "after" a task changes something
+#    Hint:
+#      tasks:
+#        - name: Update index.html
+#          ...
+#          notify: Reload page
+#      handlers:
+#        - name: Reload page
+#          debug: msg="Page was updated!"
+#
+# 4. Make the playbook idempotent: run it twice and verify
+#    nothing says "changed" the second time.
+# ============================================================

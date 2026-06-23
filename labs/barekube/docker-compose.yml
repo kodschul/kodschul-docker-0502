@@ -1,0 +1,148 @@
+# ============================================================
+# kubeadm Bare-Metal Simulation — 3-Node Kubernetes Cluster
+#
+# Topology:
+#   master  (10.10.0.10)  — Control Plane (API server, etcd, scheduler)
+#   worker1 (10.10.0.11)  — Worker Node
+#   worker2 (10.10.0.12)  — Worker Node
+#
+# Usage:
+#   docker compose build
+#   docker compose up -d
+# ============================================================
+
+services:
+
+  # ──────────────────────────────────────────────────────────
+  # CONTROL PLANE  (what kubeadm calls the "master")
+  # Runs: kube-apiserver, etcd, kube-scheduler,
+  #        kube-controller-manager, kubelet, containerd
+  # ──────────────────────────────────────────────────────────
+  master:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    hostname: k8s-master
+    container_name: k8s-master
+
+    # privileged = the container can load kernel modules,
+    # manipulate iptables, and mount filesystems — exactly
+    # what a real server can do.
+    privileged: true
+
+    networks:
+      k8s-net:
+        ipv4_address: 10.10.0.10
+
+    volumes:
+      # cgroup filesystem — kubelet NEEDS this
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      # kernel modules (read from WSL2 kernel)
+      - /lib/modules:/lib/modules:ro
+      # Mount lab scripts into the container
+      - ./scripts:/scripts:ro
+      # Persistent storage across container restarts
+      - master-kubelet:/var/lib/kubelet
+      - master-etcd:/var/lib/etcd
+      - master-kube:/etc/kubernetes
+
+    tmpfs:
+      - /run
+      - /run/lock
+      - /tmp
+
+    ports:
+      # Expose API server so you can kubectl from Windows host
+      # (mapped to 16443 to avoid conflict with any local k8s install)
+      - "16443:6443"
+
+    environment:
+      - ROLE=master
+
+  # ──────────────────────────────────────────────────────────
+  # WORKER NODE 1
+  # Runs: kubelet, containerd, kube-proxy
+  # ──────────────────────────────────────────────────────────
+  worker1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    hostname: k8s-worker1
+    container_name: k8s-worker1
+    privileged: true
+
+    networks:
+      k8s-net:
+        ipv4_address: 10.10.0.11
+
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /lib/modules:/lib/modules:ro
+      - ./scripts:/scripts:ro
+      - worker1-kubelet:/var/lib/kubelet
+
+    tmpfs:
+      - /run
+      - /run/lock
+      - /tmp
+
+    environment:
+      - ROLE=worker
+
+    depends_on:
+      - master
+
+  # ──────────────────────────────────────────────────────────
+  # WORKER NODE 2
+  # ──────────────────────────────────────────────────────────
+  worker2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    hostname: k8s-worker2
+    container_name: k8s-worker2
+    privileged: true
+
+    networks:
+      k8s-net:
+        ipv4_address: 10.10.0.12
+
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /lib/modules:/lib/modules:ro
+      - ./scripts:/scripts:ro
+      - worker2-kubelet:/var/lib/kubelet
+
+    tmpfs:
+      - /run
+      - /run/lock
+      - /tmp
+
+    environment:
+      - ROLE=worker
+
+    depends_on:
+      - master
+
+# ──────────────────────────────────────────────────────────
+# Private network for the fake cluster
+# Nodes communicate over this bridge network.
+# ──────────────────────────────────────────────────────────
+networks:
+  k8s-net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.10.0.0/24
+          gateway: 10.10.0.1
+
+# ──────────────────────────────────────────────────────────
+# Named volumes — data survives "docker compose restart"
+# ──────────────────────────────────────────────────────────
+volumes:
+  master-kubelet:
+  master-etcd:
+  master-kube:
+  worker1-kubelet:
+  worker2-kubelet:

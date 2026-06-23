@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: frontend
+  labels:
+    my-key: my-value
+
+spec:
+  containers:
+    - name: app
+      image: frontend:latest
+      imagePullPolicy: Never
+      env:
+        - name: BACKEND_URL
+          value: http://backend:90

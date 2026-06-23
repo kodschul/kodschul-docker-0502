@@ -1,0 +1,76 @@
+---
+# ============================================================
+# Playbook 02 — Create and manage files on remote servers
+#
+# Ansible modules used here:
+#   file   → create directories, set permissions
+#   copy   → write content to a file
+#   fetch  → download a file FROM the server TO the control node
+#   command → run a shell command and capture output
+#
+# Run: ansible-playbook /playbooks/02-files.yml
+# ============================================================
+
+- name: "Lab 02 — Create and manage files on remote servers"
+  hosts: servers
+
+  tasks:
+    # ── Task 1: Create a directory ──────────────────────────
+    - name: Create a working directory on the remote server
+      ansible.builtin.file:
+        path: /opt/ansible-lab # full path to create
+        state: directory # "directory" = mkdir -p
+        mode: "0755" # rwxr-xr-x
+
+    # ── Task 2: Write a file with dynamic content ───────────
+    - name: Write a hello file using the copy module
+      ansible.builtin.copy:
+        dest: /opt/ansible-lab/hello.txt
+        # 'content' is the literal file content.
+        # Variables inside {{ }} are substituted at runtime.
+        content: |
+          ============================================
+          Hello from Ansible!
+          ============================================
+          This file was created by:  ansible-control
+          On server:                 {{ inventory_hostname }}
+          Server IP:                 {{ ansible_host }}
+
+          Ansible is managing this server remotely.
+          You never had to SSH in manually!
+          ============================================
+        mode: "0644"
+
+    # ── Task 3: Read the file back ──────────────────────────
+    - name: Read the file contents
+      ansible.builtin.command: cat /opt/ansible-lab/hello.txt
+      register: file_content
+      changed_when: false # 'cat' never changes state
+
+    - name: Print what we wrote
+      ansible.builtin.debug:
+        msg: "{{ file_content.stdout_lines }}"
+        # stdout_lines splits the output into a list of lines
+
+    # ── Task 4: Create a second file with a loop ────────────
+    - name: Create multiple files using a loop
+      ansible.builtin.copy:
+        dest: "/opt/ansible-lab/{{ item }}.txt"
+        content: "This is file {{ item }}, managed by Ansible.\n"
+        mode: "0644"
+      loop:
+        - alpha
+        - beta
+        - gamma
+      # 'loop' repeats the task for each item.
+      # {{ item }} holds the current value.
+
+    # ── Task 5: List what we created ────────────────────────
+    - name: List files in the directory
+      ansible.builtin.command: ls -la /opt/ansible-lab/
+      register: dir_listing
+      changed_when: false
+
+    - name: Show directory listing
+      ansible.builtin.debug:
+        msg: "{{ dir_listing.stdout_lines }}"

@@ -1,0 +1,103 @@
+---
+# ============================================================
+# Playbook 05 — Variables, defaults, and templates
+#
+# Variables in Ansible:
+#   vars:            → defined in the playbook itself
+#   host_vars/       → per-host variable files
+#   group_vars/      → per-group variable files
+#   -e key=value     → passed on the command line (highest priority)
+#   inventory        → defined in hosts.ini
+#   facts            → collected automatically from the system
+#
+# Jinja2 template syntax:
+#   {{ variable }}             → substitute a variable
+#   {% if condition %}...{% endif %}
+#   {% for item in list %}...{% endfor %}
+#
+# Run:
+#   ansible-playbook /playbooks/05-variables.yml
+#
+# Override a variable from the command line:
+#   ansible-playbook /playbooks/05-variables.yml -e "app_name=MyApp"
+# ============================================================
+
+- name: "Lab 05 — Variables and templates"
+  hosts: servers
+
+  # ── Playbook-level variables ─────────────────────────────
+  vars:
+    app_name: "DemoApp"
+    app_version: "1.0.0"
+    install_dir: "/opt/{{ app_name | lower }}" # | lower = Jinja2 filter
+    team_members:
+      - Alice
+      - Bob
+      - Carol
+    database:
+      host: "db.internal"
+      port: 5432
+      name: "production"
+
+  tasks:
+    # ── Task 1: Show simple variable substitution ────────────
+    - name: Show app information
+      ansible.builtin.debug:
+        msg:
+          - "App name    : {{ app_name }}"
+          - "Version     : {{ app_version }}"
+          - "Install dir : {{ install_dir }}"
+
+    # ── Task 2: Create directory using a variable ────────────
+    - name: Create the install directory
+      ansible.builtin.file:
+        path: "{{ install_dir }}"
+        state: directory
+        mode: "0755"
+
+    # ── Task 3: Generate a config file from variables ────────
+    - name: Write a config file using variables
+      ansible.builtin.copy:
+        dest: "{{ install_dir }}/config.ini"
+        content: |
+          [app]
+          name    = {{ app_name }}
+          version = {{ app_version }}
+          host    = {{ inventory_hostname }}
+
+          [database]
+          host = {{ database.host }}
+          port = {{ database.port }}
+          name = {{ database.name }}
+
+          [team]
+          {% for member in team_members %}
+          member{{ loop.index }} = {{ member }}
+          {% endfor %}
+        mode: "0644"
+
+    # ── Task 4: Read the file back ───────────────────────────
+    - name: Show generated config
+      ansible.builtin.command: cat "{{ install_dir }}/config.ini"
+      register: config_output
+      changed_when: false
+
+    - name: Display config
+      ansible.builtin.debug:
+        msg: "{{ config_output.stdout_lines }}"
+
+    # ── Task 5: Use set_fact to create a variable at runtime ─
+    - name: Calculate a derived fact
+      ansible.builtin.set_fact:
+        summary_line: "{{ app_name }} v{{ app_version }} on {{ ansible_hostname }}"
+
+    - name: Show the derived fact
+      ansible.builtin.debug:
+        msg: "Summary: {{ summary_line }}"
+
+    # ── Task 6: Demonstrate variable precedence ──────────────
+    # Run with: ansible-playbook 05-variables.yml -e "app_name=OverriddenApp"
+    # and watch app_name change everywhere!
+    - name: Show current app_name (try overriding with -e)
+      ansible.builtin.debug:
+        msg: "Current app_name = {{ app_name }}"

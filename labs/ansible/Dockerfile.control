@@ -1,0 +1,61 @@
+# ============================================================
+# Ansible Control Node Image
+#
+# This container acts as the Ansible "operator workstation".
+# You run all ansible and ansible-playbook commands from here.
+# It connects to the managed servers via SSH.
+# ============================================================
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# -----------------------------------------------------------
+# 1. Install Ansible and supporting tools
+# -----------------------------------------------------------
+RUN apt-get update && apt-get install -y \
+    # Ansible itself (from Ubuntu repo; stable for learning)
+    ansible \
+    # Python — Ansible's runtime
+    python3 \
+    python3-pip \
+    # SSH client — Ansible uses this to connect to servers
+    openssh-client \
+    # sshpass — allows password-based SSH (useful for first steps)
+    sshpass \
+    # Editors
+    vim \
+    nano \
+    # Network tools (for debugging inside the container)
+    curl \
+    wget \
+    iputils-ping \
+    net-tools \
+    # Better shell experience
+    bash-completion \
+    tree \
+    && rm -rf /var/lib/apt/lists/*
+
+# -----------------------------------------------------------
+# 2. Create SSH directory with correct permissions
+# -----------------------------------------------------------
+RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh
+
+# -----------------------------------------------------------
+# 3. Copy Ansible configuration
+#    (overrides defaults: disables host key checking etc.)
+# -----------------------------------------------------------
+COPY ansible.cfg /etc/ansible/ansible.cfg
+
+# -----------------------------------------------------------
+# 4. Copy and enable startup script
+#    This script generates SSH keys and waits for servers.
+# -----------------------------------------------------------
+COPY scripts/entrypoint-control.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+WORKDIR /
+
+ENTRYPOINT ["/entrypoint.sh"]
+# Default: keep container alive; user runs:
+#   docker exec -it ansible-control bash
+CMD ["tail", "-f", "/dev/null"]

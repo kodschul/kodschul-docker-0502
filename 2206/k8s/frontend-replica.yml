@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+
+  replicas: 5
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+
+    spec:
+      containers:
+        - name: app
+          image: frontend:v2
+          imagePullPolicy: Never
+          env:
+            - name: BACKEND_URL
+              value: http://backend:90

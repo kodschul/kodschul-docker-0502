@@ -1,0 +1,62 @@
+# ============================================================
+# Managed Node Image  (server1, server2)
+#
+# Simulates a plain Ubuntu server on your network.
+# Ansible connects here via SSH and runs tasks.
+#
+# In a real environment this would be an actual server or VM.
+# Here it is a Docker container — functionally identical from
+# Ansible's perspective: it has an OS, SSH, and Python.
+# ============================================================
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# -----------------------------------------------------------
+# 1. Install SSH server + Python (Ansible requirement)
+# -----------------------------------------------------------
+RUN apt-get update && apt-get install -y \
+    # SSH server — Ansible connects via this
+    openssh-server \
+    # Python 3 — Ansible modules run Python on managed nodes
+    python3 \
+    # Common tools you might manage with Ansible
+    sudo \
+    vim \
+    curl \
+    wget \
+    net-tools \
+    iputils-ping \
+    # Clean up apt cache to keep image small
+    && rm -rf /var/lib/apt/lists/*
+
+# -----------------------------------------------------------
+# 2. Configure SSH
+#    Allow root login via public key (no password needed)
+# -----------------------------------------------------------
+RUN mkdir -p /var/run/sshd \
+    && mkdir -p /root/.ssh \
+    && chmod 700 /root/.ssh
+
+# Enable root login (key-based only, no password)
+RUN sed -i \
+    's/#PermitRootLogin prohibit-password/PermitRootLogin prohibit-password/' \
+    /etc/ssh/sshd_config
+
+# Ensure public key authentication is on
+RUN sed -i \
+    's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' \
+    /etc/ssh/sshd_config
+
+# Suppress the "login banner" that can confuse Ansible output
+RUN echo "PrintLastLog no" >> /etc/ssh/sshd_config
+
+# -----------------------------------------------------------
+# 3. Startup script
+#    Waits for the control node to publish its public key,
+#    installs it as an authorized key, then starts sshd.
+# -----------------------------------------------------------
+COPY scripts/entrypoint-server.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
