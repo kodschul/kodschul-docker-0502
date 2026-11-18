@@ -1,0 +1,22 @@
+services:
+  frontend:
+    image: frontend:v1
+    build:
+      context: frontend
+      dockerfile: front-test.dockerfile
+    ports:
+      - 3010:80
+    deploy:
+      replicas: 3
+
+    environment:
+      - BACKEND_URL=http://backend:80
+
+    depends_on:
+      - backend
+
+  backend:
+    image: backend:v1
+
+    deploy:
+      replicas: 3

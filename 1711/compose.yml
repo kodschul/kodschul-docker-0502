@@ -1,0 +1,34 @@
+services:
+  frontend:
+    image: frontend:v1
+    # build:
+    #   context: frontend
+    #   dockerfile: front-test.dockerfile
+    ports:
+      - ${FE_PORT:-4000}:80
+    deploy:
+      replicas: 1
+
+    # develop:
+    #   watch:
+    #     - path: frontend/app.py
+    #       action: rebuild
+
+    environment:
+      - BACKEND_URL=http://backend:80
+
+    depends_on:
+      - backend
+
+  backend:
+    image: backend:v1
+
+    deploy:
+      replicas: 1
+
+    healthcheck:
+      test: ["curl", "localhost:80"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
