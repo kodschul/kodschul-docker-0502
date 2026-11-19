@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hello-config
+data:
+  BACKEND_URL: http://backend:8000
+  TEST_URL: http://test.com

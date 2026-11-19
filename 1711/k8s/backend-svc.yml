@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector:
+    # welche Labels sollen ausgesucht werden?
+    my-app: backend
+
+  ports:
+    - targetPort: 80 # wohin
+      port: 8000 # woher
+

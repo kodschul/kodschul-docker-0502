@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  selector:
+    # welche Labels sollen ausgesucht werden?
+    my-app: frontend
+
+  ports:
+    - targetPort: 80 # wohin
+      port: 80 # woher
+      nodePort: 32000 # welcher Port im Lokalhost
+
+  type: NodePort

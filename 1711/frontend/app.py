@@ -18,8 +18,8 @@ from datetime import datetime
 import requests
 from flask import Flask
 
-APP_VERSION = os.getenv("APP_VERSION", "v2")
-APP_COLOR = os.getenv("APP_COLOR", "green")
+APP_VERSION = os.getenv("APP_VERSION", "v1")
+APP_COLOR = os.getenv("APP_COLOR", "yellow")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:80")
 PORT = int(os.getenv("PORT", "80"))
 DATA_DIR = os.getenv("DATA_DIR", "/data")

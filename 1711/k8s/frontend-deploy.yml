@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  annotations:
+    kubernetes.io/change-cause: "update to v1"
+spec:
+  selector:
+    matchLabels:
+      my-app: frontend
+
+  template:
+    # apiVersion: v1
+    # kind: Pod
+    metadata:
+      #name: backend
+      labels:
+        my-app: frontend
+
+    spec:
+      containers:
+        - name: app
+          image: frontend:v1
+          ports:
+            - containerPort: 80
+
+          envFrom:
+            - configMapRef:
+                name: hello-config
+
+          # env:
+          #   - name: BACKEND_URL
+          #     #value: "http://backend:80"
+          #     valueFrom:
+          #       configMapKeyRef:
+          #         name: hello-config
+          #         key: BACKEND_URL

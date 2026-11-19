@@ -8,6 +8,7 @@ Umgebungsvariablen (Standardwert in Klammern):
 import os
 import socket
 from datetime import datetime
+import json
 
 from flask import Flask, jsonify
 
@@ -24,6 +25,21 @@ app = Flask(__name__)
 # gleiche Antwort unter /api (Gateway-Route, Lab 5.3)
 @app.route("/api")
 def index():
+
+    info = {
+        "pod": POD_NAME,
+        "ip": POD_IP,
+        "time": datetime.now().strftime("%H:%M:%S"),
+        "version": APP_VERSION
+
+
+    }
+
+    os.makedirs("/data", exist_ok=True)
+
+    with open("/data/access.log", "a", ) as f:
+        f.write(json.dumps(info) + "\n")
+
     return jsonify(
         pod=POD_NAME,
         ip=POD_IP,
